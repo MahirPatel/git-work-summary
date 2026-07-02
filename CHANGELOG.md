@@ -34,3 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `Toggle AI Mode` command (Command Palette equivalent of the checkbox).
 - Renamed the extension from "Daily Work Summary -- Git" to **"Git Work Summary"** (`daily-work-summary-git` → `git-work-summary`, and every command id, setting key, view id, and stored state key updated to match). Added author contact info (`mahirpatel9765@gmail.com`) to the manifest.
 - Rewrote the README as a concise, user-facing guide (brief, use cases, setup, usage) with real screenshots of the panel and Activity Bar; moved the deeper technical write-up out of the default read path.
+
+### Fixed
+
+- Panel content (buttons, date inputs, bullets, footer) was flush against the left/right edges of the sidebar with no gutter — `#app` now has proper horizontal padding.
+- README screenshots rendered as broken images in the Extension Details view because `package.json`'s `repository` field pointed at a placeholder GitHub URL that didn't exist; `vsce` rewrites relative README image paths to that repo's raw-content URL at package time, so a dead repo meant dead images. Now points at the real repository (`github.com/MahirPatel/git-work-summary`).
