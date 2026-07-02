@@ -1,0 +1,365 @@
+{
+  "name": "git-work-summary",
+  "displayName": "Git Work Summary",
+  "description": "Automatically turns today's Git activity and file changes into ready-to-use summary bullets for standups, reports, and reviews. Deterministic and fully local by default, with an optional AI-enhanced mode powered by Groq.",
+  "version": "0.0.1",
+  "publisher": "mahirpatel",
+  "author": {
+    "name": "Mahir Patel",
+    "email": "mahirpatel9765@gmail.com"
+  },
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MahirPatel/git-work-summary.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "daily summary",
+    "standup",
+    "worklog",
+    "git",
+    "productivity",
+    "performance review",
+    "timesheet"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitWorkSummary",
+          "title": "Git Work Summary",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitWorkSummary": [
+        {
+          "type": "webview",
+          "id": "gitWorkSummary.summaryView",
+          "name": "Today's Summary",
+          "icon": "resources/icon.svg",
+          "contextualTitle": "Git Work Summary"
+        },
+        {
+          "id": "gitWorkSummary.detailsView",
+          "name": "Detected Changes",
+          "icon": "resources/icon.svg",
+          "contextualTitle": "Git Work Summary"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gitWorkSummary.detailsView",
+        "contents": "No changes detected yet.\n[Generate Today's Summary](command:gitWorkSummary.generateToday)\nCommits, staged/unstaged changes, and recently edited files will be grouped here once generated."
+      }
+    ],
+    "commands": [
+      {
+        "command": "gitWorkSummary.generateToday",
+        "title": "Generate Today's Summary",
+        "category": "Git Work Summary",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "gitWorkSummary.generateYesterday",
+        "title": "Generate Yesterday's Summary",
+        "category": "Git Work Summary",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitWorkSummary.generateWeekly",
+        "title": "Generate Weekly Summary",
+        "category": "Git Work Summary",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "gitWorkSummary.generateMonthly",
+        "title": "Generate Monthly Summary",
+        "category": "Git Work Summary",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "gitWorkSummary.generateCustom",
+        "title": "Generate Custom Summary",
+        "category": "Git Work Summary",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "gitWorkSummary.clearSummary",
+        "title": "Clear Summary",
+        "category": "Git Work Summary",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "gitWorkSummary.copySummary",
+        "title": "Copy Summary",
+        "category": "Git Work Summary",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitWorkSummary.exportMarkdown",
+        "title": "Export as Markdown",
+        "category": "Git Work Summary",
+        "icon": "$(markdown)"
+      },
+      {
+        "command": "gitWorkSummary.refresh",
+        "title": "Refresh",
+        "category": "Git Work Summary",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitWorkSummary.selectWorkspaceFolder",
+        "title": "Select Workspace Folder",
+        "category": "Git Work Summary",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "gitWorkSummary.openSettings",
+        "title": "Open Settings",
+        "category": "Git Work Summary",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "gitWorkSummary.openFile",
+        "title": "Open File",
+        "category": "Git Work Summary"
+      },
+      {
+        "command": "gitWorkSummary.setGroqApiKey",
+        "title": "Set Groq API Key",
+        "category": "Git Work Summary",
+        "icon": "$(key)"
+      },
+      {
+        "command": "gitWorkSummary.clearGroqApiKey",
+        "title": "Clear Groq API Key",
+        "category": "Git Work Summary"
+      },
+      {
+        "command": "gitWorkSummary.toggleAiMode",
+        "title": "Toggle AI Mode",
+        "category": "Git Work Summary",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "gitWorkSummary.setAiMode",
+        "title": "Set AI Mode",
+        "category": "Git Work Summary"
+      },
+      {
+        "command": "gitWorkSummary.generateCommitMessage",
+        "title": "Generate Commit Message",
+        "category": "Git Work Summary",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "gitWorkSummary.refreshStatus",
+        "title": "Refresh Status",
+        "category": "Git Work Summary"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gitWorkSummary.openFile",
+          "when": "false"
+        },
+        {
+          "command": "gitWorkSummary.setAiMode",
+          "when": "false"
+        },
+        {
+          "command": "gitWorkSummary.refreshStatus",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitWorkSummary.generateToday",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitWorkSummary.clearSummary",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitWorkSummary.copySummary",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitWorkSummary.exportMarkdown",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitWorkSummary.selectWorkspaceFolder",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitWorkSummary.openSettings",
+          "when": "view == gitWorkSummary.summaryView",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitWorkSummary.refresh",
+          "when": "view == gitWorkSummary.detailsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitWorkSummary.openSettings",
+          "when": "view == gitWorkSummary.detailsView",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Work Summary",
+      "properties": {
+        "gitWorkSummary.includeGitCommits": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Include Git commits from the selected period (`git log --since/--until`) in the generated summary."
+        },
+        "gitWorkSummary.includeStagedChanges": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Include currently staged changes (`git diff --cached`) in the generated summary. Only applies when the selected period includes today, since staged changes have no meaning for a purely historical range."
+        },
+        "gitWorkSummary.includeUnstagedChanges": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Include unstaged and untracked working-tree changes (`git diff`, `git status`) in the generated summary. Only applies when the selected period includes today."
+        },
+        "gitWorkSummary.includeModifiedFiles": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Include files anywhere in the workspace whose last-modified time falls within the selected period, even outside Git (useful for repos without Git or files that are Git-ignored)."
+        },
+        "gitWorkSummary.maxBullets": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "markdownDescription": "Maximum number of bullet points to include in a generated summary."
+        },
+        "gitWorkSummary.ignoredFolders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "node_modules",
+            "dist",
+            "build",
+            "out",
+            "coverage",
+            ".git",
+            "vendor",
+            "logs",
+            "tmp",
+            ".vscode-test",
+            ".next",
+            ".nuxt"
+          ],
+          "markdownDescription": "Folder names to ignore everywhere in the workspace when scanning for modified files."
+        },
+        "gitWorkSummary.ignoredExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".ico",
+            ".svg",
+            ".webp",
+            ".woff",
+            ".woff2",
+            ".ttf",
+            ".eot",
+            ".pdf",
+            ".zip",
+            ".tar",
+            ".gz",
+            ".exe",
+            ".dll",
+            ".so",
+            ".dylib",
+            ".class",
+            ".jar",
+            ".lock"
+          ],
+          "markdownDescription": "File extensions to ignore when scanning for modified files (binary and generated assets)."
+        },
+        "gitWorkSummary.defaultExportFolder": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Default folder (relative to the workspace root) to suggest when exporting Markdown. Leave empty to be prompted with a Save dialog every time."
+        },
+        "gitWorkSummary.aiModel": {
+          "type": "string",
+          "default": "qwen/qwen3-32b",
+          "markdownDescription": "Groq model id used when the \"Generate with AI\" checkbox is on, and by `Git Work Summary: Generate Commit Message`. See the [Groq models list](https://console.groq.com/docs/models) for available ids."
+        },
+        "gitWorkSummary.aiMaxCommits": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 50,
+          "markdownDescription": "Maximum number of commits to send to Groq in a single AI summary request. The extension also enforces its own, usually stricter, safety ceiling to stay within Groq's per-minute token limit."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.12.12",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "@vscode/test-electron": "^2.3.9",
+    "copy-webpack-plugin": "^12.0.2",
+    "eslint": "^8.57.0",
+    "glob": "^10.3.12",
+    "mocha": "^10.4.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.36",
+    "groq-sdk": "^1.3.0"
+  }
+}

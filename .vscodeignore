@@ -1,0 +1,22 @@
+.vscode/**
+.vscode-test/**
+src/**
+out/**
+node_modules/**
+.gitignore
+.eslintrc.json
+tsconfig.json
+webpack.config.js
+vsc-extension-quickstart.md
+**/*.map
+**/*.ts
+**/.gitkeep
+.github/**
+.claude/**
+resources/icon-source.svg
+
+# Only README.md and CHANGELOG.md are meant to ship - guards against any
+# other stray markdown file in the project root being packaged by accident.
+*.md
+!README.md
+!CHANGELOG.md
