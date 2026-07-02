@@ -153,7 +153,7 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
   <link href="${styleVscodeUri}" rel="stylesheet" />
   <link href="${codiconsUri}" rel="stylesheet" />
   <link href="${styleMainUri}" rel="stylesheet" />
-  <title>Git Work Summary</title>
+  <title>Git Standup</title>
 </head>
 <body>
   <div id="app">

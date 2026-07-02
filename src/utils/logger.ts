@@ -3,12 +3,12 @@ import * as vscode from 'vscode';
 /**
  * Thin wrapper around a single `OutputChannel` so diagnostic detail
  * (skipped files, git errors, etc.) is available to curious users via
- * "Output" -> "Git Work Summary" without ever popping up a modal/toast.
+ * "Output" -> "Git Standup" without ever popping up a modal/toast.
  */
 export class Logger implements vscode.Disposable {
   private readonly channel: vscode.OutputChannel;
 
-  constructor(name = 'Git Work Summary') {
+  constructor(name = 'Git Standup') {
     this.channel = vscode.window.createOutputChannel(name);
   }
 

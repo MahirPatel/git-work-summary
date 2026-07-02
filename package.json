@@ -1,6 +1,6 @@
 {
-  "name": "git-work-summary",
-  "displayName": "Git Work Summary",
+  "name": "git-standup",
+  "displayName": "Git Standup – AI Work Summary",
   "description": "Automatically turns today's Git activity and file changes into ready-to-use summary bullets for standups, reports, and reviews. Deterministic and fully local by default, with an optional AI-enhanced mode powered by Groq.",
   "version": "0.0.1",
   "publisher": "mahirpatel",
@@ -36,7 +36,7 @@
       "activitybar": [
         {
           "id": "gitWorkSummary",
-          "title": "Git Work Summary",
+          "title": "Git Standup",
           "icon": "resources/icon.svg"
         }
       ]
@@ -48,13 +48,13 @@
           "id": "gitWorkSummary.summaryView",
           "name": "Today's Summary",
           "icon": "resources/icon.svg",
-          "contextualTitle": "Git Work Summary"
+          "contextualTitle": "Git Standup"
         },
         {
           "id": "gitWorkSummary.detailsView",
           "name": "Detected Changes",
           "icon": "resources/icon.svg",
-          "contextualTitle": "Git Work Summary"
+          "contextualTitle": "Git Standup"
         }
       ]
     },
@@ -68,106 +68,106 @@
       {
         "command": "gitWorkSummary.generateToday",
         "title": "Generate Today's Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(checklist)"
       },
       {
         "command": "gitWorkSummary.generateYesterday",
         "title": "Generate Yesterday's Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(history)"
       },
       {
         "command": "gitWorkSummary.generateWeekly",
         "title": "Generate Weekly Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(calendar)"
       },
       {
         "command": "gitWorkSummary.generateMonthly",
         "title": "Generate Monthly Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(calendar)"
       },
       {
         "command": "gitWorkSummary.generateCustom",
         "title": "Generate Custom Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(calendar)"
       },
       {
         "command": "gitWorkSummary.clearSummary",
         "title": "Clear Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(clear-all)"
       },
       {
         "command": "gitWorkSummary.copySummary",
         "title": "Copy Summary",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(copy)"
       },
       {
         "command": "gitWorkSummary.exportMarkdown",
         "title": "Export as Markdown",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(markdown)"
       },
       {
         "command": "gitWorkSummary.refresh",
         "title": "Refresh",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(refresh)"
       },
       {
         "command": "gitWorkSummary.selectWorkspaceFolder",
         "title": "Select Workspace Folder",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(folder-opened)"
       },
       {
         "command": "gitWorkSummary.openSettings",
         "title": "Open Settings",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(gear)"
       },
       {
         "command": "gitWorkSummary.openFile",
         "title": "Open File",
-        "category": "Git Work Summary"
+        "category": "Git Standup"
       },
       {
         "command": "gitWorkSummary.setGroqApiKey",
         "title": "Set Groq API Key",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(key)"
       },
       {
         "command": "gitWorkSummary.clearGroqApiKey",
         "title": "Clear Groq API Key",
-        "category": "Git Work Summary"
+        "category": "Git Standup"
       },
       {
         "command": "gitWorkSummary.toggleAiMode",
         "title": "Toggle AI Mode",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(sparkle)"
       },
       {
         "command": "gitWorkSummary.setAiMode",
         "title": "Set AI Mode",
-        "category": "Git Work Summary"
+        "category": "Git Standup"
       },
       {
         "command": "gitWorkSummary.generateCommitMessage",
         "title": "Generate Commit Message",
-        "category": "Git Work Summary",
+        "category": "Git Standup",
         "icon": "$(git-commit)"
       },
       {
         "command": "gitWorkSummary.refreshStatus",
         "title": "Refresh Status",
-        "category": "Git Work Summary"
+        "category": "Git Standup"
       }
     ],
     "menus": {
@@ -229,7 +229,7 @@
       ]
     },
     "configuration": {
-      "title": "Git Work Summary",
+      "title": "Git Standup",
       "properties": {
         "gitWorkSummary.includeGitCommits": {
           "type": "boolean",
@@ -318,7 +318,7 @@
         "gitWorkSummary.aiModel": {
           "type": "string",
           "default": "qwen/qwen3-32b",
-          "markdownDescription": "Groq model id used when the \"Generate with AI\" checkbox is on, and by `Git Work Summary: Generate Commit Message`. See the [Groq models list](https://console.groq.com/docs/models) for available ids."
+          "markdownDescription": "Groq model id used when the \"Generate with AI\" checkbox is on, and by `Git Standup: Generate Commit Message`. See the [Groq models list](https://console.groq.com/docs/models) for available ids."
         },
         "gitWorkSummary.aiMaxCommits": {
           "type": "number",

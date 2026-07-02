@@ -47,6 +47,6 @@ export async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | un
     return folders[0];
   }
   return vscode.window.showWorkspaceFolderPick({
-    placeHolder: 'Select a workspace folder for Git Work Summary'
+    placeHolder: 'Select a workspace folder for Git Standup'
   });
 }

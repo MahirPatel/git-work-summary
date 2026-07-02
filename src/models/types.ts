@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for the Git Work Summary extension.
+ * Shared type definitions for the Git Standup extension.
  * Kept dependency-free (no `vscode` import) so they can be reused from
  * services, views, and unit tests without pulling in the extension host API.
  */

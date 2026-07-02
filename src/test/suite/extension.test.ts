@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 describe('Extension activation', () => {
   it('activates and registers every gitWorkSummary.* command', async () => {
-    const ext = vscode.extensions.getExtension('mahirpatel.git-work-summary');
+    const ext = vscode.extensions.getExtension('mahirpatel.git-standup');
     assert.ok(ext, 'Extension should be discoverable by id');
     await ext?.activate();
 

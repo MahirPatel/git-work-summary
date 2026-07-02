@@ -74,7 +74,7 @@ export class MarkdownExporter {
 
     lines.push('---');
     lines.push(
-      `_Generated locally by the Git Work Summary extension at ${generatedAt.toLocaleTimeString()}. No AI, no cloud services involved unless AI mode was used._`
+      `_Generated locally by the Git Standup extension at ${generatedAt.toLocaleTimeString()}. No AI, no cloud services involved unless AI mode was used._`
     );
     lines.push('');
 

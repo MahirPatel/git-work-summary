@@ -1,10 +1,10 @@
-# Git Work Summary
+# Git Standup – AI Work Summary
 
 Turn your day's Git activity into ready-to-paste summary bullets — for standups, status updates, weekly reports, or your own work log. Runs entirely on your machine by default: no account, no cloud, nothing to configure beyond installing it.
 
 ## What it does
 
-Git Work Summary reads your commits, staged/unstaged changes, and recently edited files, then turns them into a clean, categorized bullet list in seconds — so you're not stuck remembering (or writing up) what you did. Tick the optional **Generate with AI** checkbox for richer, per-commit descriptions and AI-drafted commit messages, powered by [Groq](https://groq.com) — bring your own free API key.
+Git Standup reads your commits, staged/unstaged changes, and recently edited files, then turns them into a clean, categorized bullet list in seconds — so you're not stuck remembering (or writing up) what you did. Tick the optional **Generate with AI** checkbox for richer, per-commit descriptions and AI-drafted commit messages, powered by [Groq](https://groq.com) — bring your own free API key.
 
 ![Today's Summary panel](images/summary-panel.png)
 
@@ -18,9 +18,9 @@ Git Work Summary reads your commits, staged/unstaged changes, and recently edite
 
 ## Setup
 
-1. Install **Git Work Summary** from the VS Code Extensions view (search "Git Work Summary"), or via a `.vsix` file.
+1. Install **Git Standup – AI Work Summary** from the VS Code Extensions view (search "Git Standup"), or via a `.vsix` file.
 2. Open a folder or workspace — a Git repository is recommended, but not required.
-3. Click the **Git Work Summary** icon in the Activity Bar to open the panel.
+3. Click the **Git Standup** icon in the Activity Bar to open the panel.
 
 ![Activity Bar and empty panel](images/setup-sidebar.png)
 
@@ -34,7 +34,7 @@ That's it — no accounts and no configuration needed. Everything works locally 
 
 ## How to use
 
-1. Open the **Git Work Summary** panel from the Activity Bar.
+1. Open the **Git Standup** panel from the Activity Bar.
 2. Click **Generate Today's Summary**, **Generate Yesterday's Summary**, **Generate Weekly Summary**, or **Generate Monthly Summary** — or pick a start/end date and click **Generate Custom Summary**.
 3. Click **Copy** to copy the summary as plain text, or **Export as Markdown** to save it as a file.
 4. Click **Clear** to reset the panel before generating again.

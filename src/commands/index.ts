@@ -145,7 +145,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: useAi ? 'Git Work Summary: generating AI summary…' : 'Git Work Summary: generating summary…',
+          title: useAi ? 'Git Standup: generating AI summary…' : 'Git Standup: generating summary…',
           cancellable: true
         },
         async (progress, token) => {
@@ -166,7 +166,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     } catch (err) {
       deps.logger.error('Failed to generate summary', err);
       const message = err instanceof Error ? err.message : String(err);
-      vscode.window.showErrorMessage(`Git Work Summary: failed to generate summary — ${message}`);
+      vscode.window.showErrorMessage(`Git Standup: failed to generate summary — ${message}`);
       deps.webviewProvider.showError(message);
     } finally {
       isGenerating = false;
@@ -178,12 +178,12 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   /** Resolves whether/how to use AI for this run based on the "Generate with AI" checkbox, quota, and API key - then generates. */
   const runGenerateForPeriod = async (period: SummaryPeriod, dateRange: DateRange): Promise<void> => {
     if (isGenerating) {
-      vscode.window.showInformationMessage('Git Work Summary: a summary is already being generated.');
+      vscode.window.showInformationMessage('Git Standup: a summary is already being generated.');
       return;
     }
     const folder = resolveWorkspaceFolder(rememberedFolder);
     if (!folder) {
-      vscode.window.showWarningMessage('Git Work Summary: open a folder or workspace first.');
+      vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
     }
 
@@ -193,16 +193,16 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     if (getAiModeEnabled()) {
       if (!deps.aiUsageTracker.hasRemaining()) {
         vscode.window.showWarningMessage(
-          `Git Work Summary: you've used all ${deps.aiUsageTracker.dailyLimit} AI summaries for today. Generating without AI instead. The limit resets at midnight.`
+          `Git Standup: you've used all ${deps.aiUsageTracker.dailyLimit} AI summaries for today. Generating without AI instead. The limit resets at midnight.`
         );
       } else {
         let key = await context.secrets.get(GROQ_API_KEY_SECRET);
         if (!key) {
           key = await promptAndStoreApiKey();
           if (key) {
-            vscode.window.showInformationMessage('Git Work Summary: Groq API key saved securely.');
+            vscode.window.showInformationMessage('Git Standup: Groq API key saved securely.');
           } else {
-            vscode.window.showInformationMessage('Git Work Summary: no API key entered — generating without AI.');
+            vscode.window.showInformationMessage('Git Standup: no API key entered — generating without AI.');
           }
         }
         if (key) {
@@ -255,7 +255,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
 
     const validation = validateCustomRange(startDate, endDate);
     if (!validation.valid || !validation.range) {
-      vscode.window.showWarningMessage(`Git Work Summary: ${validation.error}`);
+      vscode.window.showWarningMessage(`Git Standup: ${validation.error}`);
       return;
     }
     await runGenerateForPeriod('custom', validation.range);
@@ -268,22 +268,22 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   const copy = async (): Promise<void> => {
     const current = deps.stateStore.current;
     if (!hasContent(current)) {
-      vscode.window.showWarningMessage('Git Work Summary: generate a summary first.');
+      vscode.window.showWarningMessage('Git Standup: generate a summary first.');
       return;
     }
     await deps.clipboardService.copySummary(current);
-    vscode.window.showInformationMessage('Git Work Summary: summary copied to clipboard.');
+    vscode.window.showInformationMessage('Git Standup: summary copied to clipboard.');
   };
 
   const exportMarkdown = async (): Promise<void> => {
     const current = deps.stateStore.current;
     if (!hasContent(current)) {
-      vscode.window.showWarningMessage('Git Work Summary: generate a summary first.');
+      vscode.window.showWarningMessage('Git Standup: generate a summary first.');
       return;
     }
     const folder = resolveWorkspaceFolder(rememberedFolder);
     if (!folder) {
-      vscode.window.showWarningMessage('Git Work Summary: open a folder or workspace first.');
+      vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
     }
 
@@ -295,7 +295,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       }
       const openAction = 'Open File';
       const choice = await vscode.window.showInformationMessage(
-        `Git Work Summary: exported to ${path.basename(uri.fsPath)}`,
+        `Git Standup: exported to ${path.basename(uri.fsPath)}`,
         openAction
       );
       if (choice === openAction) {
@@ -305,14 +305,14 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     } catch (err) {
       deps.logger.error('Failed to export markdown', err);
       const message = err instanceof Error ? err.message : String(err);
-      vscode.window.showErrorMessage(`Git Work Summary: failed to export markdown — ${message}`);
+      vscode.window.showErrorMessage(`Git Standup: failed to export markdown — ${message}`);
     }
   };
 
   const selectWorkspaceFolder = async (): Promise<void> => {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-      vscode.window.showWarningMessage('Git Work Summary: open a folder or workspace first.');
+      vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
     }
     const folder = await pickWorkspaceFolder();
@@ -321,7 +321,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }
     rememberedFolder = folder;
     if (folders.length > 1) {
-      vscode.window.showInformationMessage(`Git Work Summary: now using workspace folder "${folder.name}".`);
+      vscode.window.showInformationMessage(`Git Standup: now using workspace folder "${folder.name}".`);
     }
     await refreshStatus();
   };
@@ -337,21 +337,21 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     try {
       await vscode.commands.executeCommand('vscode.open', uri);
     } catch (err) {
-      vscode.window.showErrorMessage(`Git Work Summary: could not open file — ${(err as Error).message}`);
+      vscode.window.showErrorMessage(`Git Standup: could not open file — ${(err as Error).message}`);
     }
   };
 
   const setGroqApiKey = async (): Promise<void> => {
     const stored = await promptAndStoreApiKey();
     if (stored) {
-      vscode.window.showInformationMessage('Git Work Summary: Groq API key saved securely.');
+      vscode.window.showInformationMessage('Git Standup: Groq API key saved securely.');
       await refreshStatus();
     }
   };
 
   const clearGroqApiKey = async (): Promise<void> => {
     await context.secrets.delete(GROQ_API_KEY_SECRET);
-    vscode.window.showInformationMessage('Git Work Summary: Groq API key removed.');
+    vscode.window.showInformationMessage('Git Standup: Groq API key removed.');
     await refreshStatus();
   };
 
@@ -366,13 +366,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     const next = !getAiModeEnabled();
     await context.globalState.update(AI_MODE_STORAGE_KEY, next);
     await refreshStatus();
-    vscode.window.showInformationMessage(`Git Work Summary: AI mode is now ${next ? 'ON' : 'OFF'}.`);
+    vscode.window.showInformationMessage(`Git Standup: AI mode is now ${next ? 'ON' : 'OFF'}.`);
   };
 
   const generateCommitMessage = async (): Promise<void> => {
     const folder = resolveWorkspaceFolder(rememberedFolder);
     if (!folder) {
-      vscode.window.showWarningMessage('Git Work Summary: open a folder or workspace first.');
+      vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
     }
 
@@ -382,7 +382,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       if (!apiKey) {
         return;
       }
-      vscode.window.showInformationMessage('Git Work Summary: Groq API key saved securely.');
+      vscode.window.showInformationMessage('Git Standup: Groq API key saved securely.');
       await refreshStatus();
     }
 
@@ -403,7 +403,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         diff = await deps.gitService.getUnstagedDiff(cwd, COMMIT_MESSAGE_GIT_FETCH_CHAR_CAP);
         extraContext = 'Note: these changes are not yet staged.';
       } else {
-        vscode.window.showInformationMessage('Git Work Summary: no uncommitted changes found.');
+        vscode.window.showInformationMessage('Git Standup: no uncommitted changes found.');
         return;
       }
 
@@ -418,24 +418,24 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       const result = await deps.groqService.generateCommitMessage(apiKey, settings.aiModel, diff, extraContext);
       if (!result.message) {
         vscode.window.showErrorMessage(
-          `Git Work Summary: failed to generate commit message — ${result.errorMessage ?? 'unknown error'}`
+          `Git Standup: failed to generate commit message — ${result.errorMessage ?? 'unknown error'}`
         );
         return;
       }
 
       const inserted = await insertIntoScmInputBox(folder, result.message);
       if (inserted) {
-        vscode.window.showInformationMessage('Git Work Summary: commit message generated and inserted into Source Control.');
+        vscode.window.showInformationMessage('Git Standup: commit message generated and inserted into Source Control.');
       } else {
         await vscode.env.clipboard.writeText(result.message);
         vscode.window.showInformationMessage(
-          'Git Work Summary: commit message copied to clipboard (Source Control input not found).'
+          'Git Standup: commit message copied to clipboard (Source Control input not found).'
         );
       }
     } catch (err) {
       deps.logger.error('Failed to generate commit message', err);
       const message = err instanceof Error ? err.message : String(err);
-      vscode.window.showErrorMessage(`Git Work Summary: failed to generate commit message — ${message}`);
+      vscode.window.showErrorMessage(`Git Standup: failed to generate commit message — ${message}`);
     } finally {
       deps.webviewProvider.setCommitMessageLoading(false);
     }

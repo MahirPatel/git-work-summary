@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the "Git Work Summary" extension are documented in this file.
+All notable changes to the "Git Standup – AI Work Summary" extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -39,3 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Panel content (buttons, date inputs, bullets, footer) was flush against the left/right edges of the sidebar with no gutter — `#app` now has proper horizontal padding.
 - README screenshots rendered as broken images in the Extension Details view because `package.json`'s `repository` field pointed at a placeholder GitHub URL that didn't exist; `vsce` rewrites relative README image paths to that repo's raw-content URL at package time, so a dead repo meant dead images. Now points at the real repository (`github.com/MahirPatel/git-work-summary`).
+
+### Changed
+
+- Renamed the package (`git-work-summary` → `git-standup`) and display name to **"Git Standup – AI Work Summary"** after the Marketplace rejected `git-work-summary` as already taken by another publisher. All user-facing UI text (command categories, panel/view titles, toast messages, Output channel name) now uses the short form **"Git Standup"**; internal command ids and setting keys (`gitWorkSummary.*`) were left unchanged since they're invisible implementation detail, not something a rename needs to touch.

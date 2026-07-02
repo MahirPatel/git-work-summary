@@ -205,7 +205,7 @@ export class SummaryService {
 
     if (!apiKey) {
       notices.push(
-        'AI summary needs a Groq API key — run "Git Work Summary: Set Groq API Key". Showing the deterministic summary instead.'
+        'AI summary needs a Groq API key — run "Git Standup: Set Groq API Key". Showing the deterministic summary instead.'
       );
       return { workItems: [], succeeded: false, notices };
     }
