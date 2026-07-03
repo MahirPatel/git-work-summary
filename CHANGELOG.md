@@ -5,7 +5,15 @@ All notable changes to the "Git Standup – AI Work Summary" extension are docum
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - Unreleased
+## [0.1.1] - 2026-07-03
+
+No functional changes from 0.1.0 - a housekeeping release to give the Marketplace listing a clean, unambiguous version after confirming 0.1.0 was already live.
+
+### Fixed
+
+- Restored `images/summary-panel.png`, which briefly went missing from the repo. `vsce` rewrites relative README image links to `raw/HEAD/...` on the GitHub repo — a moving pointer to whatever's currently at the tip of `main`, not a frozen copy from publish time. Deleting an image that an *already-published* version's README still references breaks that live listing immediately, even though the current README no longer uses the file. **Any image ever shipped in a published README must stay in the repo permanently** — add new ones, never delete old ones.
+
+## [0.1.0] - 2026-07-03
 
 ### Added
 
@@ -20,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - "Generate Commit Message" could stay hidden after saving new uncommitted changes, since panel status only refreshed at specific action points (webview load, after a generate click, after touching the API key/folder/AI toggle) and never in response to an actual file save. Status now also refreshes (debounced) on `onDidSaveTextDocument`.
-- Restored `images/summary-panel.png`, which briefly went missing from the repo. `vsce` rewrites relative README image links to `raw/HEAD/...` on the GitHub repo — a moving pointer to whatever's currently at the tip of `main`, not a frozen copy from publish time. Deleting an image that an *already-published* version's README still references breaks that live listing immediately, even though the current README no longer uses the file. **Any image ever shipped in a published README must stay in the repo permanently** — add new ones, never delete old ones.
 
 ## [0.0.1] - 2026-07-03
 
