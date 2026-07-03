@@ -5,7 +5,23 @@ All notable changes to the "Git Standup – AI Work Summary" extension are docum
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1] - Unreleased
+## [0.1.0] - Unreleased
+
+### Added
+
+- **Generate Commit Message** now also displays the generated text directly in the panel (with its own **Copy** button), in addition to inserting it into Source Control / falling back to the clipboard as before.
+- New **Share** button in the panel header — copies a Marketplace link to the clipboard or opens the Marketplace page, via a new `Share Extension` command.
+
+### Changed
+
+- The custom date-range pickers are now hidden behind a **"Custom Range…"** toggle instead of always taking up panel space; the four period buttons are the default, uncluttered view.
+- README now leads with an animated GIF (`images/demo.gif`) showing a generate → AI-enhanced result → commit-message flow, instead of a single static screenshot.
+
+### Fixed
+
+- "Generate Commit Message" could stay hidden after saving new uncommitted changes, since panel status only refreshed at specific action points (webview load, after a generate click, after touching the API key/folder/AI toggle) and never in response to an actual file save. Status now also refreshes (debounced) on `onDidSaveTextDocument`.
+
+## [0.0.1] - 2026-07-03
 
 ### Added
 
@@ -34,23 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `Toggle AI Mode` command (Command Palette equivalent of the checkbox).
 - Renamed the extension from "Daily Work Summary -- Git" to **"Git Work Summary"** (`daily-work-summary-git` → `git-work-summary`, and every command id, setting key, view id, and stored state key updated to match). Added author contact info (`mahirpatel9765@gmail.com`) to the manifest.
 - Rewrote the README as a concise, user-facing guide (brief, use cases, setup, usage) with real screenshots of the panel and Activity Bar; moved the deeper technical write-up out of the default read path.
+- Renamed the package (`git-work-summary` → `git-standup`) and display name to **"Git Standup – AI Work Summary"** after the Marketplace rejected `git-work-summary` as already taken by another publisher. All user-facing UI text (command categories, panel/view titles, toast messages, Output channel name) now uses the short form **"Git Standup"**; internal command ids and setting keys (`gitWorkSummary.*`) were left unchanged since they're invisible implementation detail, not something a rename needs to touch.
 
 ### Fixed
 
 - Panel content (buttons, date inputs, bullets, footer) was flush against the left/right edges of the sidebar with no gutter — `#app` now has proper horizontal padding.
 - README screenshots rendered as broken images in the Extension Details view because `package.json`'s `repository` field pointed at a placeholder GitHub URL that didn't exist; `vsce` rewrites relative README image paths to that repo's raw-content URL at package time, so a dead repo meant dead images. Now points at the real repository (`github.com/MahirPatel/git-work-summary`).
-
-### Changed
-
-- Renamed the package (`git-work-summary` → `git-standup`) and display name to **"Git Standup – AI Work Summary"** after the Marketplace rejected `git-work-summary` as already taken by another publisher. All user-facing UI text (command categories, panel/view titles, toast messages, Output channel name) now uses the short form **"Git Standup"**; internal command ids and setting keys (`gitWorkSummary.*`) were left unchanged since they're invisible implementation detail, not something a rename needs to touch.
-- The custom date-range pickers are now hidden behind a **"Custom Range…"** toggle instead of always taking up panel space; the four period buttons are the default, uncluttered view.
-- README now leads with an animated GIF (`images/demo.gif`) showing a generate → AI-enhanced result → commit-message flow, instead of a single static screenshot.
-
-### Added
-
-- **Generate Commit Message** now also displays the generated text directly in the panel (with its own **Copy** button), in addition to inserting it into Source Control / falling back to the clipboard as before.
-- New **Share** button in the panel header — copies a Marketplace link to the clipboard or opens the Marketplace page, via a new `Share Extension` command.
-
-### Fixed
-
-- "Generate Commit Message" could stay hidden after saving new uncommitted changes, since panel status only refreshed at specific action points (webview load, after a generate click, after touching the API key/folder/AI toggle) and never in response to an actual file save. Status now also refreshes (debounced) on `onDidSaveTextDocument`.

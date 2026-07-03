@@ -2,7 +2,7 @@
   "name": "git-standup",
   "displayName": "Git Standup – AI Work Summary",
   "description": "Automatically turns today's Git activity and file changes into ready-to-use summary bullets for standups, reports, and reviews. Deterministic and fully local by default, with an optional AI-enhanced mode powered by Groq.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "mahirpatel",
   "author": {
     "name": "Mahir Patel",
