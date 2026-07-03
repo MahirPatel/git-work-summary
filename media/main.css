@@ -11,6 +11,13 @@
   gap: 2px;
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .title {
   display: flex;
   align-items: center;
@@ -58,6 +65,14 @@
   gap: 6px;
 }
 
+#btn-toggle-custom-range .codicon-chevron-right {
+  transition: transform 0.1s ease-in-out;
+}
+
+#btn-toggle-custom-range[aria-expanded='true'] .codicon-chevron-right {
+  transform: rotate(90deg);
+}
+
 .custom-range {
   display: flex;
   flex-direction: column;
@@ -97,6 +112,37 @@
 #commit-message-section .btn {
   width: 100%;
   justify-content: center;
+}
+
+#commit-message-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background, transparent);
+}
+
+.commit-message-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.commit-message-result-header .section-title {
+  margin-top: 0;
+}
+
+#commit-message-text {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .btn {

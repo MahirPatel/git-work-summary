@@ -4,12 +4,15 @@
 
   const el = {
     subtitle: document.getElementById('subtitle'),
+    btnShare: document.getElementById('btn-share'),
     chkAiMode: document.getElementById('chk-ai-mode'),
     aiUsageLine: document.getElementById('ai-usage-line'),
     btnToday: document.getElementById('btn-today'),
     btnYesterday: document.getElementById('btn-yesterday'),
     btnWeekly: document.getElementById('btn-weekly'),
     btnMonthly: document.getElementById('btn-monthly'),
+    btnToggleCustomRange: document.getElementById('btn-toggle-custom-range'),
+    customRange: document.getElementById('custom-range'),
     customStart: document.getElementById('custom-start'),
     customEnd: document.getElementById('custom-end'),
     btnCustom: document.getElementById('btn-custom'),
@@ -21,6 +24,9 @@
     commitMessageSection: document.getElementById('commit-message-section'),
     btnCommitMessage: document.getElementById('btn-commit-message'),
     commitMessageBtnLabel: document.getElementById('commit-message-btn-label'),
+    commitMessageResult: document.getElementById('commit-message-result'),
+    commitMessageText: document.getElementById('commit-message-text'),
+    btnCopyCommitMessage: document.getElementById('btn-copy-commit-message'),
     folderName: document.getElementById('folder-name'),
     loading: document.getElementById('loading'),
     loadingMessage: document.getElementById('loading-message'),
@@ -156,6 +162,11 @@
       `${pluralize(result.stats.commitCount, 'commit')} · ${pluralize(result.stats.filesChangedCount, 'file')} changed`;
 
     showState('content');
+  }
+
+  function renderCommitMessage(message) {
+    el.commitMessageText.textContent = message;
+    el.commitMessageResult.classList.toggle('hidden', !message);
   }
 
   function renderStatus(status) {
@@ -302,7 +313,16 @@
   el.btnCopy.addEventListener('click', () => vscode.postMessage({ type: 'copy' }));
   el.btnExport.addEventListener('click', () => vscode.postMessage({ type: 'export' }));
   el.btnSelectFolder.addEventListener('click', () => vscode.postMessage({ type: 'selectFolder' }));
+  el.btnShare.addEventListener('click', () => vscode.postMessage({ type: 'shareExtension' }));
   el.btnCommitMessage.addEventListener('click', () => vscode.postMessage({ type: 'generateCommitMessage' }));
+  el.btnCopyCommitMessage.addEventListener('click', () =>
+    vscode.postMessage({ type: 'copyCommitMessage', message: el.commitMessageText.textContent || '' })
+  );
+  el.btnToggleCustomRange.addEventListener('click', () => {
+    const expanded = el.btnToggleCustomRange.getAttribute('aria-expanded') === 'true';
+    el.btnToggleCustomRange.setAttribute('aria-expanded', String(!expanded));
+    el.customRange.classList.toggle('hidden', expanded);
+  });
 
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -315,7 +335,7 @@
         }
         break;
       case 'result':
-        vscode.setState({ lastResult: message.payload });
+        vscode.setState({ ...vscode.getState(), lastResult: message.payload });
         render(message.payload);
         break;
       case 'error':
@@ -323,7 +343,7 @@
         showState('error');
         break;
       case 'clear':
-        vscode.setState(undefined);
+        vscode.setState({ ...vscode.getState(), lastResult: undefined });
         showState('empty');
         break;
       case 'status':
@@ -333,10 +353,17 @@
         el.btnCommitMessage.disabled = message.value;
         el.commitMessageBtnLabel.textContent = message.value ? 'Generating…' : 'Generate Commit Message';
         break;
+      case 'commitMessageResult':
+        vscode.setState({ ...vscode.getState(), lastCommitMessage: message.message });
+        renderCommitMessage(message.message);
+        break;
     }
   });
 
   const previousState = vscode.getState();
+  if (previousState && previousState.lastCommitMessage) {
+    renderCommitMessage(previousState.lastCommitMessage);
+  }
   if (previousState && previousState.lastResult) {
     render(previousState.lastResult);
   } else {

@@ -43,3 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Renamed the package (`git-work-summary` → `git-standup`) and display name to **"Git Standup – AI Work Summary"** after the Marketplace rejected `git-work-summary` as already taken by another publisher. All user-facing UI text (command categories, panel/view titles, toast messages, Output channel name) now uses the short form **"Git Standup"**; internal command ids and setting keys (`gitWorkSummary.*`) were left unchanged since they're invisible implementation detail, not something a rename needs to touch.
+- The custom date-range pickers are now hidden behind a **"Custom Range…"** toggle instead of always taking up panel space; the four period buttons are the default, uncluttered view.
+- README now leads with an animated GIF (`images/demo.gif`) showing a generate → AI-enhanced result → commit-message flow, instead of a single static screenshot.
+
+### Added
+
+- **Generate Commit Message** now also displays the generated text directly in the panel (with its own **Copy** button), in addition to inserting it into Source Control / falling back to the clipboard as before.
+- New **Share** button in the panel header — copies a Marketplace link to the clipboard or opens the Marketplace page, via a new `Share Extension` command.
+
+### Fixed
+
+- "Generate Commit Message" could stay hidden after saving new uncommitted changes, since panel status only refreshed at specific action points (webview load, after a generate click, after touching the API key/folder/AI toggle) and never in response to an actual file save. Status now also refreshes (debounced) on `onDidSaveTextDocument`.

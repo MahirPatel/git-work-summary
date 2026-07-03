@@ -146,7 +146,8 @@ export type HostToWebviewMessage =
   | { type: 'error'; message: string }
   | { type: 'clear' }
   | { type: 'status'; payload: PanelStatus }
-  | { type: 'commitMessageLoading'; value: boolean };
+  | { type: 'commitMessageLoading'; value: boolean }
+  | { type: 'commitMessageResult'; message: string };
 
 /** Messages sent from the webview UI to the extension host. */
 export type WebviewToHostMessage =
@@ -160,4 +161,6 @@ export type WebviewToHostMessage =
   | { type: 'openSettings' }
   | { type: 'setApiKey' }
   | { type: 'generateCommitMessage' }
+  | { type: 'copyCommitMessage'; message: string }
+  | { type: 'shareExtension' }
   | { type: 'ready' };

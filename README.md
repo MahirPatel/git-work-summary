@@ -6,7 +6,7 @@ Turn your day's Git activity into ready-to-paste summary bullets — for standup
 
 Git Standup reads your commits, staged/unstaged changes, and recently edited files, then turns them into a clean, categorized bullet list in seconds — so you're not stuck remembering (or writing up) what you did. Tick the optional **Generate with AI** checkbox for richer, per-commit descriptions and AI-drafted commit messages, powered by [Groq](https://groq.com) — bring your own free API key.
 
-![Today's Summary panel](images/summary-panel.png)
+![Git Standup demo — generating a summary, an AI-enhanced result, and a generated commit message](images/demo.gif)
 
 ## Use cases
 
@@ -35,11 +35,12 @@ That's it — no accounts and no configuration needed. Everything works locally 
 ## How to use
 
 1. Open the **Git Standup** panel from the Activity Bar.
-2. Click **Generate Today's Summary**, **Generate Yesterday's Summary**, **Generate Weekly Summary**, or **Generate Monthly Summary** — or pick a start/end date and click **Generate Custom Summary**.
+2. Click **Generate Today's Summary**, **Generate Yesterday's Summary**, **Generate Weekly Summary**, or **Generate Monthly Summary** — or click **Custom Range…** to reveal a start/end date picker and **Generate Custom Summary**.
 3. Click **Copy** to copy the summary as plain text, or **Export as Markdown** to save it as a file.
 4. Click **Clear** to reset the panel before generating again.
-5. If you have uncommitted changes and an AI key is set up, a **Generate Commit Message** button appears — click it to draft a commit message from your actual diff, inserted directly into Source Control.
+5. If you have uncommitted changes and an AI key is set up, a **Generate Commit Message** button appears — click it to draft a commit message from your actual diff. It's inserted directly into Source Control, and also shown in the panel with its own **Copy** button so you can grab it anytime.
 6. Open the **Detected Changes** view below the summary to see exactly which commits and files were found, grouped by category.
+7. Click **Share** in the panel header anytime to copy a link to the extension or open its Marketplace page.
 
 ## Privacy
 

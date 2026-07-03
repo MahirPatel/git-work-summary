@@ -69,6 +69,10 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
     this.postMessage({ type: 'commitMessageLoading', value: loading });
   }
 
+  showCommitMessage(message: string): void {
+    this.postMessage({ type: 'commitMessageResult', message });
+  }
+
   private async handleMessage(message: WebviewToHostMessage): Promise<void> {
     switch (message.type) {
       case 'ready':
@@ -119,6 +123,12 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
       case 'generateCommitMessage':
         await vscode.commands.executeCommand('gitWorkSummary.generateCommitMessage');
         return;
+      case 'copyCommitMessage':
+        await vscode.commands.executeCommand('gitWorkSummary.copyCommitMessage', message.message);
+        return;
+      case 'shareExtension':
+        await vscode.commands.executeCommand('gitWorkSummary.shareExtension');
+        return;
     }
   }
 
@@ -158,7 +168,12 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
 <body>
   <div id="app">
     <header class="header">
-      <h2 class="title"><span class="codicon codicon-checklist"></span> Today's Summary</h2>
+      <div class="header-row">
+        <h2 class="title"><span class="codicon codicon-checklist"></span> Today's Summary</h2>
+        <button id="btn-share" class="btn-link" type="button" title="Share this extension with your team">
+          <span class="codicon codicon-share"></span> Share
+        </button>
+      </div>
       <p class="subtitle" id="subtitle">Generate a summary to see today's work.</p>
       <p class="ai-status hidden" id="ai-status"></p>
     </header>
@@ -184,7 +199,11 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
       </button>
     </div>
 
-    <div class="custom-range">
+    <button id="btn-toggle-custom-range" class="btn-link" type="button" aria-expanded="false" aria-controls="custom-range">
+      <span class="codicon codicon-chevron-right"></span> Custom Range…
+    </button>
+
+    <div class="custom-range hidden" id="custom-range">
       <div class="custom-range-inputs">
         <input type="date" id="custom-start" aria-label="Custom range start date" />
         <span class="custom-range-sep">to</span>
@@ -212,6 +231,16 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
       <button id="btn-commit-message" class="btn btn-primary" type="button" title="Generate a commit message for your uncommitted changes">
         <span class="codicon codicon-git-commit"></span> <span id="commit-message-btn-label">Generate Commit Message</span>
       </button>
+    </div>
+
+    <div id="commit-message-result" class="hidden">
+      <div class="commit-message-result-header">
+        <span class="section-title">Generated Commit Message</span>
+        <button id="btn-copy-commit-message" class="btn-link" type="button" title="Copy commit message">
+          <span class="codicon codicon-copy"></span> Copy
+        </button>
+      </div>
+      <pre id="commit-message-text"></pre>
     </div>
 
     <div id="loading" class="state hidden">

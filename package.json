@@ -165,6 +165,17 @@
         "icon": "$(git-commit)"
       },
       {
+        "command": "gitWorkSummary.copyCommitMessage",
+        "title": "Copy Generated Commit Message",
+        "category": "Git Standup"
+      },
+      {
+        "command": "gitWorkSummary.shareExtension",
+        "title": "Share Extension",
+        "category": "Git Standup",
+        "icon": "$(share)"
+      },
+      {
         "command": "gitWorkSummary.refreshStatus",
         "title": "Refresh Status",
         "category": "Git Standup"
@@ -182,6 +193,10 @@
         },
         {
           "command": "gitWorkSummary.refreshStatus",
+          "when": "false"
+        },
+        {
+          "command": "gitWorkSummary.copyCommitMessage",
           "when": "false"
         }
       ],

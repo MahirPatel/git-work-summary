@@ -26,6 +26,8 @@ describe('Extension activation', () => {
       'gitWorkSummary.toggleAiMode',
       'gitWorkSummary.setAiMode',
       'gitWorkSummary.generateCommitMessage',
+      'gitWorkSummary.copyCommitMessage',
+      'gitWorkSummary.shareExtension',
       'gitWorkSummary.refreshStatus'
     ];
 

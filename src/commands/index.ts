@@ -92,6 +92,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   // the rest of the session, so later automatic runs don't re-prompt.
   let rememberedFolder: vscode.WorkspaceFolder | undefined;
   let isGenerating = false;
+  let statusRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 
   const getAiModeEnabled = (): boolean => context.globalState.get<boolean>(AI_MODE_STORAGE_KEY, false);
 
@@ -423,6 +424,8 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         return;
       }
 
+      deps.webviewProvider.showCommitMessage(result.message);
+
       const inserted = await insertIntoScmInputBox(folder, result.message);
       if (inserted) {
         vscode.window.showInformationMessage('Git Standup: commit message generated and inserted into Source Control.');
@@ -445,7 +448,53 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     await refreshStatus();
   };
 
+  const MARKETPLACE_URL = 'https://marketplace.visualstudio.com/items?itemName=mahirpatel.git-standup';
+
+  const shareExtension = async (): Promise<void> => {
+    const copyLink = 'Copy Marketplace Link';
+    const openPage = 'Open Marketplace Page';
+    const choice = await vscode.window.showQuickPick([copyLink, openPage], {
+      title: 'Share Git Standup – AI Work Summary',
+      placeHolder: 'How would you like to share this extension?'
+    });
+    if (choice === copyLink) {
+      await vscode.env.clipboard.writeText(MARKETPLACE_URL);
+      vscode.window.showInformationMessage('Git Standup: marketplace link copied to clipboard.');
+    } else if (choice === openPage) {
+      await vscode.env.openExternal(vscode.Uri.parse(MARKETPLACE_URL));
+    }
+  };
+
+  const copyCommitMessage = async (message?: string): Promise<void> => {
+    if (!message) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(message);
+    vscode.window.showInformationMessage('Git Standup: commit message copied to clipboard.');
+  };
+
+  /**
+   * `refreshStatus` otherwise only runs at explicit action points (webview
+   * load, after a generate click, after touching the API key/folder/AI
+   * toggle) - none of which fire just because the user edited and saved a
+   * file. Without this, "Generate Commit Message" can stay hidden after
+   * saving new uncommitted changes until some unrelated action happens to
+   * refresh it. Debounced so a multi-file "Save All" triggers one status
+   * check instead of one per file.
+   */
+  const scheduleStatusRefresh = (): void => {
+    if (statusRefreshTimer) {
+      clearTimeout(statusRefreshTimer);
+    }
+    statusRefreshTimer = setTimeout(() => {
+      statusRefreshTimer = undefined;
+      void refreshStatus();
+    }, 600);
+  };
+
   context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(() => scheduleStatusRefresh()),
+    { dispose: () => statusRefreshTimer && clearTimeout(statusRefreshTimer) },
     vscode.commands.registerCommand('gitWorkSummary.generateToday', generateToday),
     vscode.commands.registerCommand('gitWorkSummary.generateYesterday', generateYesterday),
     vscode.commands.registerCommand('gitWorkSummary.generateWeekly', generateWeekly),
@@ -463,6 +512,8 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('gitWorkSummary.toggleAiMode', toggleAiMode),
     vscode.commands.registerCommand('gitWorkSummary.setAiMode', setAiMode),
     vscode.commands.registerCommand('gitWorkSummary.generateCommitMessage', generateCommitMessage),
+    vscode.commands.registerCommand('gitWorkSummary.copyCommitMessage', copyCommitMessage),
+    vscode.commands.registerCommand('gitWorkSummary.shareExtension', shareExtension),
     vscode.commands.registerCommand('gitWorkSummary.refreshStatus', refreshStatusCommand)
   );
 }
