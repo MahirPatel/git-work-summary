@@ -24,6 +24,7 @@ export interface GitCommitInfo {
   hash: string;
   shortHash: string;
   author: string;
+  authorEmail: string;
   /** ISO-8601 commit date. */
   date: string;
   /** Commit subject line (first line of the message) only. */

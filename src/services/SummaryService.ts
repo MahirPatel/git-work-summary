@@ -62,6 +62,7 @@ export class SummaryService {
     let staged: GitFileChange[] = [];
     let unstaged: GitFileChange[] = [];
     let untracked: string[] = [];
+    let trackedFiles: string[] = [];
     let scanned: ScannedFile[] = [];
     let gitAvailable = false;
     let isRepository = false;
@@ -113,6 +114,14 @@ export class SummaryService {
           })()
         );
       }
+      if (settings.includeModifiedFiles) {
+        subtasks.push(
+          (async (): Promise<void> => {
+            progress?.report({ message: 'Checking tracked files…' });
+            trackedFiles = await this.gitService.listTrackedFiles(cwd);
+          })()
+        );
+      }
       await Promise.all(subtasks);
     })();
 
@@ -138,11 +147,23 @@ export class SummaryService {
 
     progress?.report({ message: 'Building summary…' });
 
+    // WorkspaceScanner is a pure mtime walk with no Git awareness. Committing
+    // a file doesn't reset its mtime, and neither does checkout/merge/pull
+    // materializing a file on disk whose resulting content ends up
+    // byte-identical to what Git already has - so the scanner can
+    // re-discover files Git already accounts for two different ways: (a)
+    // part of a commit this period, or currently staged/unstaged/untracked,
+    // or (b) simply tracked and currently clean, but touched on disk by a
+    // branch switch/merge/pull today. Both are excluded so the scanner only
+    // ever contributes files Git genuinely has no visibility into at all
+    // (Git-ignored files, or a non-Git workspace).
+    const gitInvisibleScanned = excludeGitKnownFiles(scanned, commits, staged, unstaged, untracked, trackedFiles);
+
     // Files already represented by a commit bullet are excluded from
     // category grouping so the same work isn't summarized twice; they
     // still appear in `fullAggregates` for the details panel and stats.
-    const uncommittedAggregates = aggregateFiles(staged, unstaged, untracked, scanned);
-    const fullAggregates = aggregateFiles(staged, unstaged, untracked, scanned, commits);
+    const uncommittedAggregates = aggregateFiles(staged, unstaged, untracked, gitInvisibleScanned);
+    const fullAggregates = aggregateFiles(staged, unstaged, untracked, gitInvisibleScanned, commits);
 
     const commitBullets = buildCommitBullets(commits);
     const categoryBullets = buildCategoryBullets(uncommittedAggregates);
@@ -330,6 +351,61 @@ export function aggregateFiles(
   }
 
   return map;
+}
+
+/**
+ * Filters the workspace scanner's mtime-based results down to files Git has
+ * no visibility into at all - i.e. not part of any commit in the period,
+ * not currently staged/unstaged/untracked, and not tracked by Git at all.
+ * Preserves the scanner's documented fallback role (Git-ignored files, or a
+ * non-Git workspace) without re-surfacing files Git already accounts for by
+ * any of these means.
+ *
+ * Two distinct root causes make this necessary, both because the scanner's
+ * independent mtime walk has no Git awareness:
+ *  1. Committing a file does not reset its on-disk mtime, so the scanner
+ *     re-discovers files that were just committed.
+ *  2. `git checkout`/`merge`/`pull` rewrite the on-disk content (and mtime)
+ *     of every file that differs between source and destination tree, even
+ *     when the resulting content ends up byte-identical to what Git already
+ *     has recorded - so `git status` reports nothing changed, yet the
+ *     scanner still sees a fresh mtime. A frequent-branch-switching workflow
+ *     can make many long-untouched, tracked-and-clean files look like
+ *     "today's work" this way, with no commit and no `git status` entry to
+ *     catch it. `trackedFiles` (from `git ls-files`) is how case 2 is
+ *     detected: any tracked path is Git-known and excluded here, regardless
+ *     of whether Git currently reports it as changed.
+ */
+export function excludeGitKnownFiles(
+  scanned: ScannedFile[],
+  commits: GitCommitInfo[],
+  staged: GitFileChange[],
+  unstaged: GitFileChange[],
+  untracked: string[],
+  trackedFiles: string[] = []
+): ScannedFile[] {
+  const known = new Set<string>();
+  for (const commit of commits) {
+    for (const relativePath of commit.files) {
+      known.add(relativePath);
+    }
+  }
+  for (const change of staged) {
+    known.add(change.relativePath);
+  }
+  for (const change of unstaged) {
+    known.add(change.relativePath);
+  }
+  for (const relativePath of untracked) {
+    known.add(relativePath);
+  }
+  for (const relativePath of trackedFiles) {
+    known.add(relativePath);
+  }
+  if (known.size === 0) {
+    return scanned;
+  }
+  return scanned.filter((file) => !known.has(file.relativePath));
 }
 
 interface CategoryGroup {

@@ -4,6 +4,7 @@ import {
   buildCategoryBullets,
   buildCategoryDetails,
   buildCommitBullets,
+  excludeGitKnownFiles,
   finalizeBullets
 } from '../../services/SummaryService';
 import { GitCommitInfo } from '../../models/types';
@@ -13,6 +14,7 @@ function makeCommit(overrides: Partial<GitCommitInfo>): GitCommitInfo {
     hash: 'abcdef1234567890',
     shortHash: 'abcdef1',
     author: 'Dev',
+    authorEmail: 'dev@example.com',
     date: new Date().toISOString(),
     message: 'did something',
     files: [],
@@ -106,6 +108,120 @@ describe('SummaryService.finalizeBullets', () => {
     const categoryBullets = [{ text: 'fixed invoice rounding', source: 'category' as const, weight: 1 }];
     const result = finalizeBullets(commitBullets, categoryBullets, 10);
     assert.strictEqual(result.length, 1);
+  });
+});
+
+describe('SummaryService.excludeGitKnownFiles', () => {
+  it('regression: scanner re-discovering a just-committed file (same mtime) is dropped entirely', () => {
+    const commit = makeCommit({
+      message: 'Changes related to dynamic logo',
+      files: [
+        'elements/logo.php',
+        'webroot/js/logo.js',
+        'config/app.php',
+        'controllers/HomeController.php',
+        'items/item.php'
+      ]
+    });
+    const commits = [commit];
+    const scanned = commit.files.map((relativePath) => ({ relativePath, mtimeMs: Date.now() }));
+
+    const gitInvisibleScanned = excludeGitKnownFiles(scanned, commits, [], [], []);
+    assert.deepStrictEqual(gitInvisibleScanned, []);
+
+    const uncommittedAggregates = aggregateFiles([], [], [], gitInvisibleScanned);
+    const categoryBullets = buildCategoryBullets(uncommittedAggregates);
+    const commitBullets = buildCommitBullets(commits);
+    const bullets = finalizeBullets(commitBullets, categoryBullets, 10);
+
+    assert.strictEqual(categoryBullets.length, 0, 'already-committed files must not also produce category bullets');
+    assert.strictEqual(
+      bullets.length,
+      1,
+      'a single commit must yield exactly one bullet, not one commit bullet plus N category bullets'
+    );
+  });
+
+  it('preserves the fallback role: a file Git has no knowledge of at all still surfaces', () => {
+    const scanned = [{ relativePath: 'scratch/local-notes.txt', mtimeMs: Date.now() }];
+    const gitInvisibleScanned = excludeGitKnownFiles(scanned, [], [], [], []);
+    assert.deepStrictEqual(gitInvisibleScanned, scanned);
+
+    const aggregates = aggregateFiles([], [], [], gitInvisibleScanned);
+    assert.strictEqual(buildCategoryBullets(aggregates).length, 1);
+  });
+
+  it('drops only the overlapping files, keeping genuinely git-invisible ones from the same scan', () => {
+    const commits = [makeCommit({ files: ['elements/logo.php'] })];
+    const scanned = [
+      { relativePath: 'elements/logo.php', mtimeMs: Date.now() },
+      { relativePath: 'scratch/local-notes.txt', mtimeMs: Date.now() }
+    ];
+    const result = excludeGitKnownFiles(scanned, commits, [], [], []);
+    assert.deepStrictEqual(
+      result.map((f) => f.relativePath),
+      ['scratch/local-notes.txt']
+    );
+  });
+
+  it('also excludes files already reported as staged/unstaged/untracked, not just committed ones', () => {
+    const scanned = [
+      { relativePath: 'src/a.ts', mtimeMs: Date.now() },
+      { relativePath: 'src/b.ts', mtimeMs: Date.now() },
+      { relativePath: 'src/c.ts', mtimeMs: Date.now() }
+    ];
+    const result = excludeGitKnownFiles(
+      scanned,
+      [],
+      [{ relativePath: 'src/a.ts', changeType: 'modified' }],
+      [{ relativePath: 'src/b.ts', changeType: 'modified' }],
+      ['src/c.ts']
+    );
+    assert.deepStrictEqual(result, []);
+  });
+
+  it('returns scanned files unchanged when nothing is known to Git (non-repo / Git unavailable)', () => {
+    const scanned = [
+      { relativePath: 'a.txt', mtimeMs: Date.now() },
+      { relativePath: 'b.txt', mtimeMs: Date.now() }
+    ];
+    assert.deepStrictEqual(excludeGitKnownFiles(scanned, [], [], [], []), scanned);
+  });
+
+  it('regression: a tracked-and-clean file with a recent mtime (checkout/merge/pull residue) is dropped even though Git reports it as unchanged', () => {
+    // Simulates `git checkout`/`merge`/`pull` rewriting a tracked file's
+    // on-disk content back to something byte-identical to what Git already
+    // has recorded - `git status` has nothing to report, so the file never
+    // appears in commits/staged/unstaged/untracked, yet the scanner's
+    // independent mtime walk still picks it up as "recently modified".
+    const scanned = [
+      { relativePath: 'app/Controller/MenusController.php', mtimeMs: Date.now() },
+      { relativePath: 'app/Model/Item.php', mtimeMs: Date.now() }
+    ];
+    const trackedFiles = ['app/Controller/MenusController.php', 'app/Model/Item.php', 'app/View/Menus/index.ctp'];
+
+    const result = excludeGitKnownFiles(scanned, [], [], [], [], trackedFiles);
+    assert.deepStrictEqual(result, []);
+  });
+
+  it('preserves the fallback role even when trackedFiles is supplied: a file absent from Git entirely still surfaces', () => {
+    const scanned = [{ relativePath: 'scratch/local-notes.txt', mtimeMs: Date.now() }];
+    const trackedFiles = ['src/index.ts'];
+    const gitInvisibleScanned = excludeGitKnownFiles(scanned, [], [], [], [], trackedFiles);
+    assert.deepStrictEqual(gitInvisibleScanned, scanned);
+  });
+
+  it('drops tracked-and-clean files while keeping genuinely untracked/ignored ones from the same scan', () => {
+    const scanned = [
+      { relativePath: 'app/Model/Item.php', mtimeMs: Date.now() },
+      { relativePath: 'scratch/local-notes.txt', mtimeMs: Date.now() }
+    ];
+    const trackedFiles = ['app/Model/Item.php', 'app/Controller/MenusController.php'];
+    const result = excludeGitKnownFiles(scanned, [], [], [], [], trackedFiles);
+    assert.deepStrictEqual(
+      result.map((f) => f.relativePath),
+      ['scratch/local-notes.txt']
+    );
   });
 });
 

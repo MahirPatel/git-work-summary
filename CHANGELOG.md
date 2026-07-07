@@ -5,6 +5,13 @@ All notable changes to the "Git Standup – AI Work Summary" extension are docum
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-07-06
+
+### Fixed
+
+- Commits from other authors could appear in "my" summary/count when their git name or email loosely matched the current user's identity. `git log --author=<pattern>` treats the pattern as an unanchored, case-sensitive regex against the full `"Name <email>"` trailer, not an exact-identity filter — a `.` in an email acted as a wildcard, and a short name like "Ana" substring-matched an unrelated "Anand Kumar". A day with genuinely 1 commit could therefore show as 2+. Author scoping is now done via exact, case-insensitive equality against the commit's author name/email in-process, instead of relying on git's `--author` regex.
+- A single commit could still produce extra, redundant category bullets duplicating its own files (e.g. 1 real commit showing as 8 bullets), from two distinct root causes that both come down to the same underlying issue: the workspace scanner's independent mtime-based file walk (the fallback signal meant only for Git-ignored files or non-Git workspaces) re-discovering files Git already accounts for elsewhere. (1) Committing a file doesn't reset its on-disk modified time, so the scanner re-discovered the exact files that were just committed. (2) Even with no commit involved at all, switching branches, merging, or pulling rewrites the on-disk content (and mtime) of every file that differs between the source and destination tree — including files whose resulting content ends up byte-identical to what Git already has, so `git status` reports nothing changed, yet the scanner still saw a fresh mtime and mis-flagged long-settled files as new work (especially disruptive for a frequent-branch-switching workflow). The scanner's results are now filtered against everything Git already knows about — files touched by a commit in the period, staged, unstaged, untracked, or simply tracked at all (via `git ls-files`) — so it only ever contributes files Git genuinely has no visibility into.
+
 ## [0.1.1] - 2026-07-03
 
 No functional changes from 0.1.0 - a housekeeping release to give the Marketplace listing a clean, unambiguous version after confirming 0.1.0 was already live.

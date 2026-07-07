@@ -73,15 +73,15 @@ export class GitService {
 
   /**
    * Commits within [since, until] on the current branch, excluding merge
-   * commits, optionally scoped to a single author.
+   * commits, optionally scoped to a single author identity.
    */
   async getCommitsInRange(
     cwd: string,
     since: Date,
     until: Date,
-    authorFilter?: string
+    identity?: string
   ): Promise<GitCommitInfo[]> {
-    const format = `${RECORD_SEPARATOR}%H${UNIT_SEPARATOR}%an${UNIT_SEPARATOR}%aI${UNIT_SEPARATOR}%s`;
+    const format = `${RECORD_SEPARATOR}%H${UNIT_SEPARATOR}%an${UNIT_SEPARATOR}%ae${UNIT_SEPARATOR}%aI${UNIT_SEPARATOR}%s`;
     const args = [
       'log',
       `--since=${since.toISOString()}`,
@@ -90,9 +90,11 @@ export class GitService {
       '--name-only',
       `--pretty=format:${format}`
     ];
-    if (authorFilter) {
-      args.push(`--author=${authorFilter}`);
-    }
+    // Deliberately no `--author=` here: git treats that pattern as an
+    // unanchored, case-sensitive regex matched against "Name <email>", not
+    // an exact identity filter - a `.` in an email becomes a wildcard, and
+    // "Ana" substring-matches "Anand Kumar". We filter for an exact
+    // identity match in JS instead - see filterCommitsByIdentity below.
 
     let stdout: string;
     try {
@@ -112,14 +114,15 @@ export class GitService {
       const header = newlineIdx === -1 ? chunk : chunk.slice(0, newlineIdx);
       const filesBlock = newlineIdx === -1 ? '' : chunk.slice(newlineIdx + 1);
       const parts = header.split(UNIT_SEPARATOR);
-      if (parts.length < 4) {
+      if (parts.length < 5) {
         continue;
       }
-      // Indices are safe: `parts.length >= 4` was just checked above.
+      // Indices are safe: `parts.length >= 5` was just checked above.
       const hash = parts[0]!;
       const author = parts[1]!;
-      const date = parts[2]!;
-      const message = parts.slice(3).join(UNIT_SEPARATOR).trim();
+      const authorEmail = parts[2]!;
+      const date = parts[3]!;
+      const message = parts.slice(4).join(UNIT_SEPARATOR).trim();
       const files = filesBlock
         .split('\n')
         .map((line) => line.trim())
@@ -129,12 +132,13 @@ export class GitService {
         hash,
         shortHash: hash.slice(0, 7),
         author,
+        authorEmail,
         date,
         message,
         files
       });
     }
-    return commits;
+    return filterCommitsByIdentity(commits, identity);
   }
 
   async getStagedChanges(cwd: string): Promise<GitFileChange[]> {
@@ -167,6 +171,28 @@ export class GitService {
         .filter((p) => p.length > 0);
     } catch (err) {
       this.logger.warn(`git status failed, skipping untracked files: ${(err as Error).message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Every file path Git currently tracks (`git ls-files`), regardless of
+   * on-disk mtime or working-tree dirtiness. Used to recognize that a file
+   * is Git-known even when it's currently clean - `git checkout`/`merge`/
+   * `pull` can rewrite a tracked file's content (and mtime) back to
+   * something byte-identical to what Git already has recorded, which
+   * `git status` correctly reports as unchanged but which a plain
+   * filesystem mtime scan cannot tell apart from a genuine edit.
+   */
+  async listTrackedFiles(cwd: string): Promise<string[]> {
+    try {
+      const out = await this.run(cwd, ['ls-files']);
+      return out
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    } catch (err) {
+      this.logger.warn(`git ls-files failed, skipping tracked-file lookup: ${(err as Error).message}`);
       return [];
     }
   }
@@ -293,4 +319,30 @@ export class GitService {
     const stderr = nodeErr?.stderr ? String(nodeErr.stderr).trim() : '';
     return new GitCommandError(stderr || nodeErr?.message || 'git command failed', 'exec-error');
   }
+}
+
+/**
+ * Restricts commits to a single git identity via exact, case-insensitive
+ * equality against either the commit's author email or author name.
+ * Replaces relying on `git log --author=<pattern>`, which is an unanchored,
+ * case-sensitive regex against the raw "Name <email>" trailer, not an
+ * exact-identity filter - regex metacharacters in an email (e.g. dots)
+ * acted as wildcards, and unanchored substrings like "Ana" matched
+ * unrelated authors like "Anand Kumar". `identity` may be an email or a
+ * bare name (see getCurrentUserIdentity's user.name fallback), so both
+ * commit fields are checked. Returns `commits` unchanged when `identity`
+ * is undefined/blank - the existing "show commits from every author"
+ * behavior when no git identity is configured.
+ */
+export function filterCommitsByIdentity(
+  commits: GitCommitInfo[],
+  identity: string | undefined
+): GitCommitInfo[] {
+  const needle = identity?.trim().toLowerCase();
+  if (!needle) {
+    return commits;
+  }
+  return commits.filter(
+    (commit) => commit.authorEmail.toLowerCase() === needle || commit.author.toLowerCase() === needle
+  );
 }
