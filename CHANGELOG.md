@@ -5,6 +5,17 @@ All notable changes to the "Git Standup – AI Work Summary" extension are docum
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-08
+
+### Added
+
+- New **"Team Wise Summary"** checkbox: when checked, commits from every author in the repository are included (not just the current user), and both the deterministic bullet list and the AI summary are grouped by author (`Author: Name` heading, that author's points nested underneath — your own uncommitted work is folded into your own group). Off by default; the previous "only my commits" behavior is unchanged when unchecked.
+- **Multi-root workspace support**: in a workspace with more than one folder open, the panel now shows a checkbox per folder (dynamically read from the workspace, not fixed), with the first folder checked by default. Checking multiple folders and generating produces one combined summary — each repo under its own heading with its full summary (notices, bullets/AI work items, Team Wise Summary grouping, files touched, stats) — mirrored in Export as Markdown, Copy, and the "Detected Changes" tree view. A single-folder workspace shows no checklist at all; behavior there is unchanged.
+
+### Changed
+
+- AI summary generation quota is now consumed per repository that actually gets AI treatment in a given click (not once per click), so a multi-repo generate that runs out of quota partway through gracefully falls back to the deterministic summary for the remaining repos instead of blocking the whole batch.
+
 ## [0.1.2] - 2026-07-06
 
 ### Fixed

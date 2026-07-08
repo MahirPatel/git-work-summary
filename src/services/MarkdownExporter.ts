@@ -18,13 +18,35 @@ export class MarkdownExporter {
     lines.push('## Summary');
     lines.push('');
 
-    if (result.aiSummaryUsed && result.workItems.length > 0) {
+    if (result.teamWiseSummaryUsed && result.aiSummaryUsed && result.workItemGroups?.length) {
+      for (const group of result.workItemGroups) {
+        lines.push(`#### Author: ${group.author}`);
+        lines.push('');
+        for (const item of group.items) {
+          lines.push(`- **${item.title}**`);
+          if (item.commitMessage) {
+            lines.push(`  - Commit Message: ${item.commitMessage}`);
+          }
+          lines.push(`  - Description: ${item.description}`);
+        }
+        lines.push('');
+      }
+    } else if (result.aiSummaryUsed && result.workItems.length > 0) {
       for (const item of result.workItems) {
         lines.push(`- **${item.title}**`);
         if (item.commitMessage) {
           lines.push(`  - Commit Message: ${item.commitMessage}`);
         }
         lines.push(`  - Description: ${item.description}`);
+      }
+    } else if (result.teamWiseSummaryUsed && result.bulletGroups?.length) {
+      for (const group of result.bulletGroups) {
+        lines.push(`#### Author: ${group.author}`);
+        lines.push('');
+        for (const bullet of group.bullets) {
+          lines.push(`- ${bullet}`);
+        }
+        lines.push('');
       }
     } else if (result.bullets.length === 0) {
       lines.push('_No development activity detected for this period._');
@@ -82,17 +104,30 @@ export class MarkdownExporter {
   }
 
   /**
+   * Multi-repo entry point: returns `buildMarkdown(results[0])` verbatim
+   * when there's exactly one result (byte-identical to the single-repo
+   * output), otherwise joins each repo's own markdown under a `## {name}`
+   * heading, separated by a rule.
+   */
+  buildMarkdownForResults(results: SummaryResult[]): string {
+    if (results.length === 1) {
+      return this.buildMarkdown(results[0]!);
+    }
+    return results.map((result) => `## ${result.workspaceFolderName}\n\n${this.buildMarkdown(result)}`).join('\n---\n\n');
+  }
+
+  /**
    * Shows a Save dialog defaulting to a period-appropriate filename (e.g.
    * `daily-summary-2026-07-02.md`, `weekly-summary-2026-06-26_to_2026-07-02.md`)
    * in the workspace root (or the configured default export folder), then
    * writes the file. Returns the written Uri, or undefined if cancelled.
    */
   async export(
-    result: SummaryResult,
+    results: SummaryResult[],
     workspaceFolder: vscode.WorkspaceFolder,
     defaultExportFolder: string
   ): Promise<vscode.Uri | undefined> {
-    const filename = buildFilename(result);
+    const filename = buildFilename(results[0]!);
     const baseDir = defaultExportFolder
       ? vscode.Uri.joinPath(workspaceFolder.uri, defaultExportFolder)
       : workspaceFolder.uri;
@@ -107,7 +142,7 @@ export class MarkdownExporter {
       return undefined;
     }
 
-    const markdown = this.buildMarkdown(result);
+    const markdown = this.buildMarkdownForResults(results);
     await vscode.workspace.fs.writeFile(targetUri, Buffer.from(markdown, 'utf8'));
     this.logger.info(`Exported markdown to ${targetUri.fsPath}`);
     return targetUri;

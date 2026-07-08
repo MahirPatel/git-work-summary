@@ -76,6 +76,20 @@ export interface WorkItem {
   title: string;
   commitMessage?: string;
   description: string;
+  /** Commit author (or the current user, for uncommitted work) - only set when Team Wise Summary is enabled. */
+  author?: string;
+}
+
+/** One author's work items, in Team Wise Summary order (current user first, then alphabetical). */
+export interface AuthorWorkItemGroup {
+  author: string;
+  items: WorkItem[];
+}
+
+/** One author's bullets, in Team Wise Summary order (current user first, then alphabetical). */
+export interface AuthorBulletGroup {
+  author: string;
+  bullets: string[];
 }
 
 /** Full result of running the summary pipeline once, for a given period. */
@@ -88,6 +102,12 @@ export interface SummaryResult {
   workItems: WorkItem[];
   /** True if `workItems` came from Groq rather than the deterministic fallback. */
   aiSummaryUsed: boolean;
+  /** True if Team Wise Summary was enabled for this run (commits from every author, not just the current user). */
+  teamWiseSummaryUsed: boolean;
+  /** Present only when `teamWiseSummaryUsed` is true - `bullets` grouped by author, for the deterministic (non-AI) list. */
+  bulletGroups?: AuthorBulletGroup[];
+  /** Present only when `teamWiseSummaryUsed` is true - `workItems` grouped by author, for the AI summary. */
+  workItemGroups?: AuthorWorkItemGroup[];
   period: SummaryPeriod;
   dateRange: DateRange;
   /** ISO-8601 timestamp of when this summary was generated. */
@@ -121,6 +141,8 @@ export interface BulletCandidate {
   source: 'commit' | 'category';
   /** Higher sorts earlier. Commit bullets are weighted above category bullets. */
   weight: number;
+  /** Commit author (or the current user, for category/uncommitted bullets) - only set when Team Wise Summary is enabled. */
+  author?: string;
 }
 
 /** Aggregated view of a single file across every data source that reported it. */
@@ -134,16 +156,21 @@ export interface FileAggregate {
 /** Panel-wide toggle/quota/availability state, independent of any single generated result. */
 export interface PanelStatus {
   aiModeEnabled: boolean;
+  teamWiseSummaryEnabled: boolean;
   hasApiKey: boolean;
   hasUncommittedChanges: boolean;
   aiUsageUsed: number;
   aiUsageLimit: number;
+  /** Every workspace folder currently open, for the multi-repo checkbox list. `path` is `folder.uri.toString()`. */
+  workspaceFolders: { path: string; name: string }[];
+  /** Name of the folder "Select Workspace Folder" / "Generate Commit Message" currently target (independent of the checkbox selection above). */
+  defaultFolderName: string | undefined;
 }
 
 /** Messages sent from the extension host to the webview UI. */
 export type HostToWebviewMessage =
   | { type: 'loading'; value: boolean }
-  | { type: 'result'; payload: SummaryResult }
+  | { type: 'result'; payload: SummaryResult[] }
   | { type: 'error'; message: string }
   | { type: 'clear' }
   | { type: 'status'; payload: PanelStatus }
@@ -152,10 +179,11 @@ export type HostToWebviewMessage =
 
 /** Messages sent from the webview UI to the extension host. */
 export type WebviewToHostMessage =
-  | { type: 'generatePeriod'; period: 'today' | 'yesterday' | 'weekly' | 'monthly' }
-  | { type: 'generateCustom'; startDate: string; endDate: string }
+  | { type: 'generatePeriod'; period: 'today' | 'yesterday' | 'weekly' | 'monthly'; folderPaths?: string[] }
+  | { type: 'generateCustom'; startDate: string; endDate: string; folderPaths?: string[] }
   | { type: 'clearSummary' }
   | { type: 'setAiMode'; enabled: boolean }
+  | { type: 'setTeamWiseSummary'; enabled: boolean }
   | { type: 'copy' }
   | { type: 'export' }
   | { type: 'selectFolder' }

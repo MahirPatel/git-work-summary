@@ -39,12 +39,62 @@ export const GROQ_API_KEY_SECRET = 'groqApiKey';
 /** globalState key for the "Generate with AI" checkbox - a standing preference, not a per-click parameter. */
 const AI_MODE_STORAGE_KEY = 'gitWorkSummary.aiModeEnabled';
 
+/** globalState key for the "Team Wise Summary" checkbox - a standing preference, not a per-click parameter. */
+const TEAM_WISE_STORAGE_KEY = 'gitWorkSummary.teamWiseSummaryEnabled';
+
 /** A generous cap on how much diff text to even fetch from git; GroqService applies its own tighter token budget on top. */
 const COMMIT_MESSAGE_GIT_FETCH_CHAR_CAP = 20000;
 const MAX_UNTRACKED_FILES_LISTED = 20;
 
-function hasContent(result: SummaryResult | undefined): result is SummaryResult {
-  return !!result && (result.bullets.length > 0 || result.workItems.length > 0);
+function hasContent(results: SummaryResult[] | undefined): results is SummaryResult[] {
+  return !!results && results.some((r) => r.bullets.length > 0 || r.workItems.length > 0);
+}
+
+/**
+ * Resolves which workspace folder(s) a Generate click should cover.
+ * `folderPaths` comes from the webview's repo checkbox list (matched
+ * against `folder.uri.toString()`); when absent/empty (Command Palette
+ * invocation, or a single-folder workspace where the checkbox list is
+ * never shown) falls back to the existing single-folder mechanism.
+ */
+function resolveSelectedFolders(
+  folderPaths: string[] | undefined,
+  rememberedFolder: vscode.WorkspaceFolder | undefined
+): vscode.WorkspaceFolder[] {
+  const all = vscode.workspace.workspaceFolders ?? [];
+  if (folderPaths && folderPaths.length > 0) {
+    const matched = all.filter((f) => folderPaths.includes(f.uri.toString()));
+    if (matched.length > 0) {
+      return matched;
+    }
+  }
+  const fallback = resolveWorkspaceFolder(rememberedFolder);
+  return fallback ? [fallback] : [];
+}
+
+/** Synthesized result for a folder whose `generate()` call threw unexpectedly, so one bad repo doesn't abort a multi-repo batch or vanish silently. */
+function buildFolderErrorResult(
+  folder: vscode.WorkspaceFolder,
+  period: SummaryPeriod,
+  dateRange: DateRange,
+  err: unknown
+): SummaryResult {
+  const message = err instanceof Error ? err.message : String(err);
+  return {
+    bullets: [],
+    workItems: [],
+    aiSummaryUsed: false,
+    teamWiseSummaryUsed: false,
+    period,
+    dateRange,
+    generatedAt: new Date().toISOString(),
+    workspaceFolderName: folder.name,
+    workspaceFolderPath: folder.uri.fsPath,
+    stats: { commitCount: 0, filesChangedCount: 0, gitAvailable: false, isRepository: false },
+    details: [],
+    commits: [],
+    notices: [`Failed to generate summary for "${folder.name}": ${message}`]
+  };
 }
 
 interface GitExtensionRepository {
@@ -95,8 +145,10 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   let statusRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 
   const getAiModeEnabled = (): boolean => context.globalState.get<boolean>(AI_MODE_STORAGE_KEY, false);
+  const getTeamWiseSummaryEnabled = (): boolean =>
+    context.globalState.get<boolean>(TEAM_WISE_STORAGE_KEY, false);
 
-  /** Recomputes and pushes the panel's standing status (AI mode, API key, uncommitted changes, quota) to the webview. */
+  /** Recomputes and pushes the panel's standing status (AI mode, team-wise mode, API key, uncommitted changes, quota) to the webview. */
   const refreshStatus = async (): Promise<void> => {
     const folder = resolveWorkspaceFolder(rememberedFolder);
     const [hasApiKey, hasUncommittedChanges] = await Promise.all([
@@ -105,10 +157,16 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     ]);
     const status: PanelStatus = {
       aiModeEnabled: getAiModeEnabled(),
+      teamWiseSummaryEnabled: getTeamWiseSummaryEnabled(),
       hasApiKey,
       hasUncommittedChanges,
       aiUsageUsed: deps.aiUsageTracker.getUsedToday(),
-      aiUsageLimit: deps.aiUsageTracker.dailyLimit
+      aiUsageLimit: deps.aiUsageTracker.dailyLimit,
+      workspaceFolders: (vscode.workspace.workspaceFolders ?? []).map((f) => ({
+        path: f.uri.toString(),
+        name: f.name
+      })),
+      defaultFolderName: folder?.name
     };
     deps.webviewProvider.postStatus(status);
   };
@@ -132,11 +190,12 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     return trimmed;
   };
 
-  /** Shared by every period command - only the period/dateRange differ. */
+  /** Shared by every period command - only the period/dateRange differ. Runs `generate()` once per selected folder, in one progress-tracked, cancellable batch. */
   const runGenerate = async (
-    folder: vscode.WorkspaceFolder,
+    folders: vscode.WorkspaceFolder[],
     period: SummaryPeriod,
     dateRange: DateRange,
+    teamWiseSummary: boolean,
     useAi: boolean,
     apiKey: string | undefined
   ): Promise<void> => {
@@ -150,18 +209,58 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           cancellable: true
         },
         async (progress, token) => {
-          const settings = deps.settingsManager.getSettings(folder.uri);
-          const result = await deps.summaryService.generate(
-            folder,
-            settings,
-            period,
-            dateRange,
-            useAi,
-            apiKey,
-            token,
-            progress
-          );
-          deps.stateStore.set(result);
+          const results: SummaryResult[] = [];
+          let quotaWarned = false;
+
+          for (let i = 0; i < folders.length; i++) {
+            if (token.isCancellationRequested) {
+              // All-or-nothing cancel, matching today's single-folder behavior:
+              // discard everything gathered so far rather than committing a partial batch.
+              return;
+            }
+            const folder = folders[i]!;
+            if (folders.length > 1) {
+              progress.report({ message: `Generating summary for "${folder.name}" (${i + 1} of ${folders.length})…` });
+            }
+
+            let folderUseAi = false;
+            if (useAi) {
+              if (deps.aiUsageTracker.hasRemaining()) {
+                await deps.aiUsageTracker.recordUse();
+                folderUseAi = true;
+              } else if (!quotaWarned) {
+                quotaWarned = true;
+                vscode.window.showWarningMessage(
+                  `Git Standup: you've used all ${deps.aiUsageTracker.dailyLimit} AI summaries for today. ${
+                    folders.length > 1 ? 'Remaining repos will be generated without AI.' : 'Generating without AI instead.'
+                  } The limit resets at midnight.`
+                );
+              }
+            }
+
+            try {
+              const settings = deps.settingsManager.getSettings(folder.uri);
+              const result = await deps.summaryService.generate(
+                folder,
+                settings,
+                period,
+                dateRange,
+                teamWiseSummary,
+                folderUseAi,
+                apiKey,
+                token,
+                progress
+              );
+              results.push(result);
+            } catch (err) {
+              deps.logger.error(`Failed to generate summary for "${folder.name}"`, err);
+              results.push(buildFolderErrorResult(folder, period, dateRange, err));
+            }
+          }
+
+          if (!token.isCancellationRequested) {
+            deps.stateStore.set(results);
+          }
         }
       );
     } catch (err) {
@@ -176,18 +275,23 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }
   };
 
-  /** Resolves whether/how to use AI for this run based on the "Generate with AI" checkbox, quota, and API key - then generates. */
-  const runGenerateForPeriod = async (period: SummaryPeriod, dateRange: DateRange): Promise<void> => {
+  /** Resolves which folder(s) and whether/how to use AI for this run based on the checked repos, "Generate with AI" checkbox, quota, and API key - then generates. */
+  const runGenerateForPeriod = async (
+    period: SummaryPeriod,
+    dateRange: DateRange,
+    folderPaths?: string[]
+  ): Promise<void> => {
     if (isGenerating) {
       vscode.window.showInformationMessage('Git Standup: a summary is already being generated.');
       return;
     }
-    const folder = resolveWorkspaceFolder(rememberedFolder);
-    if (!folder) {
+    const folders = resolveSelectedFolders(folderPaths, rememberedFolder);
+    if (folders.length === 0) {
       vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
     }
 
+    const teamWiseSummary = getTeamWiseSummaryEnabled();
     let useAi = false;
     let apiKey: string | undefined;
 
@@ -207,23 +311,26 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           }
         }
         if (key) {
-          await deps.aiUsageTracker.recordUse();
           useAi = true;
           apiKey = key;
         }
       }
     }
 
-    await runGenerate(folder, period, dateRange, useAi, apiKey);
+    await runGenerate(folders, period, dateRange, teamWiseSummary, useAi, apiKey);
   };
 
-  const generateToday = async (): Promise<void> => runGenerateForPeriod('today', getTodayRange());
-  const generateYesterday = async (): Promise<void> => runGenerateForPeriod('yesterday', getYesterdayRange());
-  const generateWeekly = async (): Promise<void> => runGenerateForPeriod('weekly', getWeeklyRange());
-  const generateMonthly = async (): Promise<void> => runGenerateForPeriod('monthly', getMonthlyRange());
+  const generateToday = async (folderPaths?: string[]): Promise<void> =>
+    runGenerateForPeriod('today', getTodayRange(), folderPaths);
+  const generateYesterday = async (folderPaths?: string[]): Promise<void> =>
+    runGenerateForPeriod('yesterday', getYesterdayRange(), folderPaths);
+  const generateWeekly = async (folderPaths?: string[]): Promise<void> =>
+    runGenerateForPeriod('weekly', getWeeklyRange(), folderPaths);
+  const generateMonthly = async (folderPaths?: string[]): Promise<void> =>
+    runGenerateForPeriod('monthly', getMonthlyRange(), folderPaths);
 
   /** `startDateArg`/`endDateArg` come from the webview's date pickers; omitted for Command Palette invocation, which prompts instead. */
-  const generateCustom = async (startDateArg?: string, endDateArg?: string): Promise<void> => {
+  const generateCustom = async (startDateArg?: string, endDateArg?: string, folderPaths?: string[]): Promise<void> => {
     let startDate = startDateArg;
     let endDate = endDateArg;
 
@@ -259,7 +366,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       vscode.window.showWarningMessage(`Git Standup: ${validation.error}`);
       return;
     }
-    await runGenerateForPeriod('custom', validation.range);
+    await runGenerateForPeriod('custom', validation.range, folderPaths);
   };
 
   const clearSummary = async (): Promise<void> => {
@@ -282,7 +389,10 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       vscode.window.showWarningMessage('Git Standup: generate a summary first.');
       return;
     }
-    const folder = resolveWorkspaceFolder(rememberedFolder);
+    // Resolve the base folder from what was actually summarized, not an
+    // independently-tracked "current folder" that may point elsewhere.
+    const primaryUri = vscode.Uri.file(current[0]!.workspaceFolderPath);
+    const folder = vscode.workspace.getWorkspaceFolder(primaryUri) ?? resolveWorkspaceFolder(rememberedFolder);
     if (!folder) {
       vscode.window.showWarningMessage('Git Standup: open a folder or workspace first.');
       return;
@@ -368,6 +478,20 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     await context.globalState.update(AI_MODE_STORAGE_KEY, next);
     await refreshStatus();
     vscode.window.showInformationMessage(`Git Standup: AI mode is now ${next ? 'ON' : 'OFF'}.`);
+  };
+
+  /** Internal - driven by the webview checkbox, which always sends an explicit state. */
+  const setTeamWiseSummary = async (enabled?: boolean): Promise<void> => {
+    await context.globalState.update(TEAM_WISE_STORAGE_KEY, !!enabled);
+    await refreshStatus();
+  };
+
+  /** User-facing equivalent of the checkbox for Command Palette users. */
+  const toggleTeamWiseSummary = async (): Promise<void> => {
+    const next = !getTeamWiseSummaryEnabled();
+    await context.globalState.update(TEAM_WISE_STORAGE_KEY, next);
+    await refreshStatus();
+    vscode.window.showInformationMessage(`Git Standup: Team Wise Summary is now ${next ? 'ON' : 'OFF'}.`);
   };
 
   const generateCommitMessage = async (): Promise<void> => {
@@ -511,6 +635,8 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('gitWorkSummary.clearGroqApiKey', clearGroqApiKey),
     vscode.commands.registerCommand('gitWorkSummary.toggleAiMode', toggleAiMode),
     vscode.commands.registerCommand('gitWorkSummary.setAiMode', setAiMode),
+    vscode.commands.registerCommand('gitWorkSummary.toggleTeamWiseSummary', toggleTeamWiseSummary),
+    vscode.commands.registerCommand('gitWorkSummary.setTeamWiseSummary', setTeamWiseSummary),
     vscode.commands.registerCommand('gitWorkSummary.generateCommitMessage', generateCommitMessage),
     vscode.commands.registerCommand('gitWorkSummary.copyCommitMessage', copyCommitMessage),
     vscode.commands.registerCommand('gitWorkSummary.shareExtension', shareExtension),

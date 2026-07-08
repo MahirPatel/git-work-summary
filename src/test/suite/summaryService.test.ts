@@ -5,7 +5,8 @@ import {
   buildCategoryDetails,
   buildCommitBullets,
   excludeGitKnownFiles,
-  finalizeBullets
+  finalizeBullets,
+  groupByAuthor
 } from '../../services/SummaryService';
 import { GitCommitInfo } from '../../models/types';
 
@@ -66,6 +67,18 @@ describe('SummaryService.buildCategoryBullets', () => {
     assert.strictEqual(bullets[0]?.text, 'Improved authentication module');
     assert.strictEqual(bullets[1]?.text, 'Added new payment processing feature');
   });
+
+  it('leaves author unset when no selfAuthor is given', () => {
+    const aggregates = aggregateFiles([{ relativePath: 'README.md', changeType: 'modified' }], [], [], []);
+    const bullets = buildCategoryBullets(aggregates);
+    assert.strictEqual(bullets[0]?.author, undefined);
+  });
+
+  it('attributes every category bullet to selfAuthor when provided (uncommitted work is always the current user\'s)', () => {
+    const aggregates = aggregateFiles([{ relativePath: 'README.md', changeType: 'modified' }], [], [], []);
+    const bullets = buildCategoryBullets(aggregates, 'Mahir Patel');
+    assert.strictEqual(bullets[0]?.author, 'Mahir Patel');
+  });
 });
 
 describe('SummaryService.buildCommitBullets', () => {
@@ -87,6 +100,12 @@ describe('SummaryService.buildCommitBullets', () => {
     assert.strictEqual(bullets[0]?.text, 'Second thing');
     assert.strictEqual(bullets[1]?.text, 'First thing');
   });
+
+  it('attaches each commit\'s author to its bullet candidate', () => {
+    const commits = [makeCommit({ message: 'do a thing', author: 'Nishit Dangi' })];
+    const bullets = buildCommitBullets(commits);
+    assert.strictEqual(bullets[0]?.author, 'Nishit Dangi');
+  });
 });
 
 describe('SummaryService.finalizeBullets', () => {
@@ -100,7 +119,10 @@ describe('SummaryService.finalizeBullets', () => {
       { text: 'Category bullet 2', source: 'category' as const, weight: 2 }
     ];
     const result = finalizeBullets(commitBullets, categoryBullets, 3);
-    assert.deepStrictEqual(result, ['Commit bullet 1', 'Commit bullet 2', 'Category bullet 1']);
+    assert.deepStrictEqual(
+      result.map((c) => c.text),
+      ['Commit bullet 1', 'Commit bullet 2', 'Category bullet 1']
+    );
   });
 
   it('deduplicates near-identical text regardless of casing/punctuation', () => {
@@ -108,6 +130,56 @@ describe('SummaryService.finalizeBullets', () => {
     const categoryBullets = [{ text: 'fixed invoice rounding', source: 'category' as const, weight: 1 }];
     const result = finalizeBullets(commitBullets, categoryBullets, 10);
     assert.strictEqual(result.length, 1);
+  });
+
+  it('preserves author on the finalized candidates', () => {
+    const commitBullets = [{ text: 'Commit bullet 1', source: 'commit' as const, weight: 1000, author: 'Mahir Patel' }];
+    const categoryBullets: never[] = [];
+    const result = finalizeBullets(commitBullets, categoryBullets, 10);
+    assert.strictEqual(result[0]?.author, 'Mahir Patel');
+  });
+});
+
+describe('SummaryService.groupByAuthor', () => {
+  it('orders the current user\'s bucket first, then remaining authors alphabetically', () => {
+    const items = [
+      { author: 'Nishit Dangi' },
+      { author: 'Amit Shah' },
+      { author: 'Mahir Patel' }
+    ];
+    const groups = groupByAuthor(items, 'Mahir Patel');
+    assert.deepStrictEqual(
+      groups.map((g) => g.author),
+      ['Mahir Patel', 'Amit Shah', 'Nishit Dangi']
+    );
+  });
+
+  it('sorts alphabetically with no self bucket preference when selfAuthor is undefined', () => {
+    const items = [{ author: 'Nishit Dangi' }, { author: 'Amit Shah' }];
+    const groups = groupByAuthor(items, undefined);
+    assert.deepStrictEqual(
+      groups.map((g) => g.author),
+      ['Amit Shah', 'Nishit Dangi']
+    );
+  });
+
+  it('buckets items with no author under a shared fallback label instead of dropping them', () => {
+    const items = [{ author: undefined }, { author: 'Mahir Patel' }];
+    const groups = groupByAuthor(items, 'Mahir Patel');
+    assert.strictEqual(groups.length, 2);
+    assert.ok(groups.some((g) => g.author === 'Uncommitted Changes'));
+  });
+
+  it('preserves relative order of items within each bucket', () => {
+    const items = [
+      { author: 'Mahir Patel', text: 'first' },
+      { author: 'Mahir Patel', text: 'second' }
+    ];
+    const groups = groupByAuthor(items, 'Mahir Patel');
+    assert.deepStrictEqual(
+      groups[0]?.items.map((i) => i.text),
+      ['first', 'second']
+    );
   });
 });
 

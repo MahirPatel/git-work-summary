@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import {
   SummarySettings,
+  AuthorBulletGroup,
+  AuthorWorkItemGroup,
   BulletCandidate,
   CategoryDetail,
   CategoryDetailFile,
@@ -43,6 +45,7 @@ export class SummaryService {
     settings: SummarySettings,
     period: SummaryPeriod,
     dateRange: DateRange,
+    teamWiseSummary: boolean,
     useAi: boolean,
     apiKey: string | undefined,
     token?: vscode.CancellationToken,
@@ -66,6 +69,7 @@ export class SummaryService {
     let scanned: ScannedFile[] = [];
     let gitAvailable = false;
     let isRepository = false;
+    let selfAuthor: string | undefined;
 
     const gitTask = (async (): Promise<void> => {
       if (!wantsGit) {
@@ -84,14 +88,25 @@ export class SummaryService {
         return;
       }
 
+      // Uncommitted work (staged/unstaged/untracked) is always the current
+      // user's own working tree - Git has no visibility into a teammate's
+      // uncommitted changes - so its bullets/work items are attributed to
+      // this display name when grouping by author.
+      if (teamWiseSummary) {
+        selfAuthor = await this.gitService.getCurrentUserName(cwd);
+      }
+
       const subtasks: Promise<void>[] = [];
       if (settings.includeGitCommits) {
         subtasks.push(
           (async (): Promise<void> => {
             progress?.report({ message: 'Reading commits…' });
-            const identity = await this.gitService.getCurrentUserIdentity(cwd);
-            if (!identity) {
-              notices.push('Git user identity is not configured — showing commits from all authors.');
+            let identity: string | undefined;
+            if (!teamWiseSummary) {
+              identity = await this.gitService.getCurrentUserIdentity(cwd);
+              if (!identity) {
+                notices.push('Git user identity is not configured — showing commits from all authors.');
+              }
             }
             commits = await this.gitService.getCommitsInRange(cwd, since, until, identity);
           })()
@@ -166,8 +181,10 @@ export class SummaryService {
     const fullAggregates = aggregateFiles(staged, unstaged, untracked, gitInvisibleScanned, commits);
 
     const commitBullets = buildCommitBullets(commits);
-    const categoryBullets = buildCategoryBullets(uncommittedAggregates);
-    const bullets = finalizeBullets(commitBullets, categoryBullets, settings.maxBullets);
+    const categoryBullets = buildCategoryBullets(uncommittedAggregates, selfAuthor);
+    const finalizedBullets = finalizeBullets(commitBullets, categoryBullets, settings.maxBullets);
+    const bullets = finalizedBullets.map((candidate) => candidate.text);
+    const bulletGroups = teamWiseSummary ? toAuthorBulletGroups(finalizedBullets, selfAuthor) : undefined;
     const details = buildCategoryDetails(fullAggregates);
 
     if (bullets.length === 0) {
@@ -177,16 +194,21 @@ export class SummaryService {
     let workItems: WorkItem[] = [];
     let aiSummaryUsed = false;
     if (useAi) {
-      const ai = await this.buildAiWorkItems(cwd, commits, categoryBullets, settings, apiKey);
+      const ai = await this.buildAiWorkItems(cwd, commits, categoryBullets, settings, apiKey, teamWiseSummary);
       workItems = ai.workItems;
       aiSummaryUsed = ai.succeeded;
       notices.push(...ai.notices);
     }
+    const workItemGroups =
+      teamWiseSummary && aiSummaryUsed ? toAuthorWorkItemGroups(workItems, selfAuthor) : undefined;
 
     return {
       bullets,
       workItems,
       aiSummaryUsed,
+      teamWiseSummaryUsed: teamWiseSummary,
+      bulletGroups,
+      workItemGroups,
       period,
       dateRange,
       generatedAt: new Date().toISOString(),
@@ -216,12 +238,14 @@ export class SummaryService {
     commits: GitCommitInfo[],
     categoryBullets: BulletCandidate[],
     settings: SummarySettings,
-    apiKey: string | undefined
+    apiKey: string | undefined,
+    teamWiseSummary: boolean
   ): Promise<{ workItems: WorkItem[]; succeeded: boolean; notices: string[] }> {
     const notices: string[] = [];
     const uncommittedItems: WorkItem[] = categoryBullets.map((bullet) => ({
       title: bullet.text,
-      description: `${bullet.weight} file(s) changed in this area, not yet committed.`
+      description: `${bullet.weight} file(s) changed in this area, not yet committed.`,
+      author: bullet.author
     }));
 
     if (!apiKey) {
@@ -272,7 +296,8 @@ export class SummaryService {
     const commitItems: WorkItem[] = commitsForAi.map((commit, i) => ({
       title: aiItems[i]?.title ?? humanizeCommitMessage(commit.message),
       commitMessage: commit.message,
-      description: aiItems[i]?.description || humanizeCommitMessage(commit.message)
+      description: aiItems[i]?.description || humanizeCommitMessage(commit.message),
+      author: teamWiseSummary ? commit.author : undefined
     }));
 
     return { workItems: [...commitItems, ...uncommittedItems], succeeded: true, notices };
@@ -288,6 +313,7 @@ function buildCancelledResult(
     bullets: [],
     workItems: [],
     aiSummaryUsed: false,
+    teamWiseSummaryUsed: false,
     period,
     dateRange,
     generatedAt: new Date().toISOString(),
@@ -415,7 +441,7 @@ interface CategoryGroup {
 }
 
 /** Groups aggregated files by category and produces one ranked bullet candidate per group. */
-export function buildCategoryBullets(aggregates: Map<string, FileAggregate>): BulletCandidate[] {
+export function buildCategoryBullets(aggregates: Map<string, FileAggregate>, selfAuthor?: string): BulletCandidate[] {
   const groups = new Map<string, CategoryGroup>();
 
   for (const agg of aggregates.values()) {
@@ -434,7 +460,10 @@ export function buildCategoryBullets(aggregates: Map<string, FileAggregate>): Bu
   const candidates: BulletCandidate[] = [];
   for (const [category, group] of groups) {
     const text = buildCategoryBulletText(category, group.fixedPhrase, group.changeTypes, group.count);
-    candidates.push({ text, source: 'category', weight: group.count });
+    // Category bullets are always built from the current user's own
+    // uncommitted (staged/unstaged/untracked) tree, so any known display
+    // name is unambiguously this user's, not a teammate's.
+    candidates.push({ text, source: 'category', weight: group.count, author: selfAuthor });
   }
 
   candidates.sort((a, b) => b.weight - a.weight || a.text.localeCompare(b.text));
@@ -455,7 +484,7 @@ export function buildCommitBullets(commits: GitCommitInfo[]): BulletCandidate[] 
     }
     seen.add(key);
     // Commit bullets outrank category bullets: they're the developer's own words.
-    candidates.push({ text, source: 'commit', weight: 1000 + commit.files.length });
+    candidates.push({ text, source: 'commit', weight: 1000 + commit.files.length, author: commit.author });
   }
   return candidates;
 }
@@ -465,7 +494,7 @@ export function finalizeBullets(
   commitBullets: BulletCandidate[],
   categoryBullets: BulletCandidate[],
   maxBullets: number
-): string[] {
+): BulletCandidate[] {
   const all = [...commitBullets, ...categoryBullets];
   const seen = new Set<string>();
   const deduped: BulletCandidate[] = [];
@@ -479,7 +508,7 @@ export function finalizeBullets(
     deduped.push(candidate);
   }
 
-  return deduped.slice(0, Math.max(0, maxBullets)).map((c) => c.text);
+  return deduped.slice(0, Math.max(0, maxBullets));
 }
 
 function normalizeForDedupe(text: string): string {
@@ -487,6 +516,61 @@ function normalizeForDedupe(text: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+const UNATTRIBUTED_AUTHOR_LABEL = 'Uncommitted Changes';
+
+/**
+ * Buckets items by `author` for Team Wise Summary, ordered with the
+ * current user's bucket first (if present), then every other author
+ * alphabetically. Items without a resolvable author (e.g. uncommitted work
+ * when the current user's `user.name` isn't configured) fall into a shared
+ * `UNATTRIBUTED_AUTHOR_LABEL` bucket rather than being dropped. Preserves
+ * each item's relative order within its bucket.
+ */
+export function groupByAuthor<T extends { author?: string }>(
+  items: T[],
+  selfAuthor: string | undefined
+): Array<{ author: string; items: T[] }> {
+  const order: string[] = [];
+  const buckets = new Map<string, T[]>();
+
+  for (const item of items) {
+    const key = item.author?.trim() || UNATTRIBUTED_AUTHOR_LABEL;
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = [];
+      buckets.set(key, bucket);
+      order.push(key);
+    }
+    bucket.push(item);
+  }
+
+  const self = selfAuthor?.trim();
+  order.sort((a, b) => {
+    if (self) {
+      if (a === self && b !== self) {
+        return -1;
+      }
+      if (b === self && a !== self) {
+        return 1;
+      }
+    }
+    return a.localeCompare(b);
+  });
+
+  return order.map((author) => ({ author, items: buckets.get(author)! }));
+}
+
+function toAuthorBulletGroups(candidates: BulletCandidate[], selfAuthor: string | undefined): AuthorBulletGroup[] {
+  return groupByAuthor(candidates, selfAuthor).map((group) => ({
+    author: group.author,
+    bullets: group.items.map((c) => c.text)
+  }));
+}
+
+function toAuthorWorkItemGroups(items: WorkItem[], selfAuthor: string | undefined): AuthorWorkItemGroup[] {
+  return groupByAuthor(items, selfAuthor).map((group) => ({ author: group.author, items: group.items }));
 }
 
 /** Builds the category -> files breakdown shown in the details panel / tree view. */

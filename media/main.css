@@ -59,6 +59,46 @@
   margin: 0;
 }
 
+.repo-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.repo-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.repo-check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.repo-check-row input[type='checkbox'] {
+  margin: 0;
+}
+
+.repo-block + .repo-block {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.repo-heading {
+  font-size: 1em;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -236,6 +276,17 @@
   flex-shrink: 0;
 }
 
+.author-heading {
+  font-size: 0.95em;
+  font-weight: 700;
+  color: var(--vscode-foreground);
+  margin: 10px 0 4px;
+}
+
+.author-heading:first-child {
+  margin-top: 0;
+}
+
 .work-items {
   list-style: none;
   display: flex;
@@ -273,7 +324,7 @@
   color: var(--vscode-descriptionForeground);
 }
 
-#notices {
+.notices {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -298,13 +349,13 @@
   margin-left: auto;
 }
 
-#details-section {
+.details-section {
   border-top: 1px solid var(--vscode-panel-border);
   padding-top: 8px;
   margin-top: 4px;
 }
 
-#details-section summary {
+.details-section summary {
   cursor: pointer;
   font-size: 0.9em;
   color: var(--vscode-descriptionForeground);

@@ -254,3 +254,35 @@ describe('GitService.listTrackedFiles (real git repo)', function () {
     }
   });
 });
+
+describe('GitService.getCurrentUserName (real git repo)', function () {
+  this.timeout(20000);
+
+  let dir: string;
+  let gitService: GitService;
+
+  before(() => {
+    gitService = new GitService(new Logger('git-standup-test'));
+  });
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-standup-test-'));
+    execFileSync('git', ['init'], { cwd: dir });
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('returns the locally configured user.name', async () => {
+    execFileSync('git', ['config', 'user.name', 'Mahir Patel'], { cwd: dir });
+    const name = await gitService.getCurrentUserName(dir);
+    assert.strictEqual(name, 'Mahir Patel');
+  });
+
+  it('trims surrounding whitespace from the configured value', async () => {
+    execFileSync('git', ['config', 'user.name', '  Nishit Dangi  '], { cwd: dir });
+    const name = await gitService.getCurrentUserName(dir);
+    assert.strictEqual(name, 'Nishit Dangi');
+  });
+});

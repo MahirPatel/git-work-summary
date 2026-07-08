@@ -2,7 +2,7 @@
   "name": "git-standup",
   "displayName": "Git Standup – AI Work Summary",
   "description": "Automatically turns today's Git activity and file changes into ready-to-use summary bullets for standups, reports, and reviews. Deterministic and fully local by default, with an optional AI-enhanced mode powered by Groq.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "mahirpatel",
   "author": {
     "name": "Mahir Patel",
@@ -159,6 +159,17 @@
         "category": "Git Standup"
       },
       {
+        "command": "gitWorkSummary.toggleTeamWiseSummary",
+        "title": "Toggle Team Wise Summary",
+        "category": "Git Standup",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "gitWorkSummary.setTeamWiseSummary",
+        "title": "Set Team Wise Summary",
+        "category": "Git Standup"
+      },
+      {
         "command": "gitWorkSummary.generateCommitMessage",
         "title": "Generate Commit Message",
         "category": "Git Standup",
@@ -189,6 +200,10 @@
         },
         {
           "command": "gitWorkSummary.setAiMode",
+          "when": "false"
+        },
+        {
+          "command": "gitWorkSummary.setTeamWiseSummary",
           "when": "false"
         },
         {

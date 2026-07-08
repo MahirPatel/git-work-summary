@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { SummaryStateStore } from '../services/SummaryStateStore';
-import { CategoryDetail, CategoryDetailFile, GitCommitInfo } from '../models/types';
+import { CategoryDetail, CategoryDetailFile, GitCommitInfo, SummaryResult } from '../models/types';
 
+interface RepoNode {
+  kind: 'repo';
+  result: SummaryResult;
+}
 interface CommitsRootNode {
   kind: 'commits-root';
   commits: GitCommitInfo[];
@@ -14,6 +18,7 @@ interface CommitNode {
 interface CategoryNode {
   kind: 'category';
   detail: CategoryDetail;
+  workspaceFolderPath: string;
 }
 interface FileNode {
   kind: 'file';
@@ -21,12 +26,15 @@ interface FileNode {
   workspaceFolderPath: string;
 }
 
-type TreeNode = CommitsRootNode | CommitNode | CategoryNode | FileNode;
+type TreeNode = RepoNode | CommitsRootNode | CommitNode | CategoryNode | FileNode;
 
 /**
  * "Detected Changes" tree: a structured, drill-down view of exactly what
  * was found (commits today, then files grouped by category). Complements
  * the prose-style webview summary with something inspectable and clickable.
+ * When more than one repo was summarized (multi-root selection), an extra
+ * top-level "repo" node groups each folder's own commits/categories;
+ * with exactly one result the tree stays flat, exactly as before.
  */
 export class DetectedChangesTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
@@ -42,6 +50,8 @@ export class DetectedChangesTreeProvider implements vscode.TreeDataProvider<Tree
 
   getTreeItem(element: TreeNode): vscode.TreeItem {
     switch (element.kind) {
+      case 'repo':
+        return this.buildRepoItem(element);
       case 'commits-root':
         return this.buildCommitsRootItem(element);
       case 'commit':
@@ -54,29 +64,48 @@ export class DetectedChangesTreeProvider implements vscode.TreeDataProvider<Tree
   }
 
   getChildren(element?: TreeNode): TreeNode[] {
-    const result = this.stateStore.current;
+    const results = this.stateStore.current;
     if (!element) {
-      if (!result) {
+      if (!results || results.length === 0) {
         return [];
       }
-      const nodes: TreeNode[] = [];
-      if (result.commits.length > 0) {
-        nodes.push({ kind: 'commits-root', commits: result.commits });
+      if (results.length === 1) {
+        return this.buildResultChildren(results[0]!);
       }
-      for (const detail of result.details) {
-        nodes.push({ kind: 'category', detail });
-      }
-      return nodes;
+      return results.map((result): RepoNode => ({ kind: 'repo', result }));
     }
 
+    if (element.kind === 'repo') {
+      return this.buildResultChildren(element.result);
+    }
     if (element.kind === 'commits-root') {
-      return element.commits.map((commit) => ({ kind: 'commit', commit }));
+      return element.commits.map((commit): CommitNode => ({ kind: 'commit', commit }));
     }
     if (element.kind === 'category') {
-      const workspaceFolderPath = result?.workspaceFolderPath ?? '';
-      return element.detail.files.map((file) => ({ kind: 'file', file, workspaceFolderPath }));
+      return element.detail.files.map(
+        (file): FileNode => ({ kind: 'file', file, workspaceFolderPath: element.workspaceFolderPath })
+      );
     }
     return [];
+  }
+
+  /** Builds the flat commits-root/category children for one repo's result - shared by the single-result root and each `RepoNode`'s children. */
+  private buildResultChildren(result: SummaryResult): TreeNode[] {
+    const nodes: TreeNode[] = [];
+    if (result.commits.length > 0) {
+      nodes.push({ kind: 'commits-root', commits: result.commits });
+    }
+    for (const detail of result.details) {
+      nodes.push({ kind: 'category', detail, workspaceFolderPath: result.workspaceFolderPath });
+    }
+    return nodes;
+  }
+
+  private buildRepoItem(element: RepoNode): vscode.TreeItem {
+    const item = new vscode.TreeItem(element.result.workspaceFolderName, vscode.TreeItemCollapsibleState.Expanded);
+    item.iconPath = new vscode.ThemeIcon('folder-library');
+    item.contextValue = 'gitWorkSummary.repo';
+    return item;
   }
 
   private buildCommitsRootItem(element: CommitsRootNode): vscode.TreeItem {

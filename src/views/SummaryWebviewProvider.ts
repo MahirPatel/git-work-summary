@@ -89,14 +89,16 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
               ? 'gitWorkSummary.generateYesterday'
               : message.period === 'weekly'
                 ? 'gitWorkSummary.generateWeekly'
-                : 'gitWorkSummary.generateMonthly'
+                : 'gitWorkSummary.generateMonthly',
+          message.folderPaths
         );
         return;
       case 'generateCustom':
         await vscode.commands.executeCommand(
           'gitWorkSummary.generateCustom',
           message.startDate,
-          message.endDate
+          message.endDate,
+          message.folderPaths
         );
         return;
       case 'clearSummary':
@@ -104,6 +106,9 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
         return;
       case 'setAiMode':
         await vscode.commands.executeCommand('gitWorkSummary.setAiMode', message.enabled);
+        return;
+      case 'setTeamWiseSummary':
+        await vscode.commands.executeCommand('gitWorkSummary.setTeamWiseSummary', message.enabled);
         return;
       case 'copy':
         await vscode.commands.executeCommand('gitWorkSummary.copySummary');
@@ -178,11 +183,21 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
       <p class="ai-status hidden" id="ai-status"></p>
     </header>
 
+    <div class="repo-select hidden" id="repo-select">
+      <p class="section-title">Repositories</p>
+      <div id="repo-select-list" class="repo-select-list"></div>
+    </div>
+
     <label class="ai-mode-row" for="chk-ai-mode">
       <input type="checkbox" id="chk-ai-mode" />
       <span>Generate with AI</span>
     </label>
     <p class="ai-usage-line" id="ai-usage-line"></p>
+
+    <label class="ai-mode-row" for="chk-team-wise" title="Include commits from every author, grouped by author">
+      <input type="checkbox" id="chk-team-wise" />
+      <span>Team Wise Summary</span>
+    </label>
 
     <div class="toolbar">
       <button id="btn-today" class="btn btn-primary" type="button" title="Summarize today">
@@ -260,18 +275,9 @@ export class SummaryWebviewProvider implements vscode.WebviewViewProvider {
     </div>
 
     <div id="content" class="hidden">
-      <div id="notices"></div>
-
-      <h3 class="section-title" id="work-title">Today's Work</h3>
-      <div id="work-list"></div>
-
-      <details id="details-section">
-        <summary>Files touched (<span id="details-count">0</span>)</summary>
-        <div id="details-body"></div>
-      </details>
+      <div id="results-container"></div>
 
       <footer class="footer">
-        <span id="footer-stats" class="footer-stats"></span>
         <button id="btn-select-folder" class="btn-link" type="button" title="Select workspace folder">
           <span class="codicon codicon-folder-opened"></span> <span id="folder-name"></span>
         </button>

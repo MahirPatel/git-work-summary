@@ -71,6 +71,16 @@ export class GitService {
     return undefined;
   }
 
+  /** Configured `user.name` only (display label for author grouping), independent of the email-preferred identity used for commit filtering. */
+  async getCurrentUserName(cwd: string): Promise<string | undefined> {
+    try {
+      const name = (await this.run(cwd, ['config', 'user.name'])).trim();
+      return name || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
    * Commits within [since, until] on the current branch, excluding merge
    * commits, optionally scoped to a single author identity.
