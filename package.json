@@ -2,7 +2,7 @@
   "name": "git-standup",
   "displayName": "Git Standup – AI Work Summary",
   "description": "Automatically turns today's Git activity and file changes into ready-to-use summary bullets for standups, reports, and reviews. Deterministic and fully local by default, with an optional AI-enhanced mode powered by Groq.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "mahirpatel",
   "author": {
     "name": "Mahir Patel",
@@ -347,8 +347,14 @@
         },
         "gitWorkSummary.aiModel": {
           "type": "string",
-          "default": "qwen/qwen3-32b",
+          "default": "qwen/qwen3.6-27b",
           "markdownDescription": "Groq model id used when the \"Generate with AI\" checkbox is on, and by `Git Standup: Generate Commit Message`. See the [Groq models list](https://console.groq.com/docs/models) for available ids."
+        },
+        "gitWorkSummary.apiKey": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Your Groq API key. Overrides the built-in default key. Stored in plain text in your local settings (this setting is machine-scoped, so it's never included in Settings Sync). Prefer `Set Groq API Key` instead if you'd rather keep it in VS Code's encrypted Secret Storage."
         },
         "gitWorkSummary.aiMaxCommits": {
           "type": "number",

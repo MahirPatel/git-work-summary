@@ -8,6 +8,7 @@ import { ClipboardService } from '../services/ClipboardService';
 import { SettingsManager } from '../services/SettingsManager';
 import { SummaryStateStore } from '../services/SummaryStateStore';
 import { AiUsageTracker } from '../services/AiUsageTracker';
+import { DEFAULT_GROQ_API_KEY } from '../config/defaultApiKey';
 import { DateRange, PanelStatus, SummaryPeriod, SummaryResult } from '../models/types';
 import { SummaryWebviewProvider } from '../views/SummaryWebviewProvider';
 import { Logger } from '../utils/logger';
@@ -151,8 +152,9 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   /** Recomputes and pushes the panel's standing status (AI mode, team-wise mode, API key, uncommitted changes, quota) to the webview. */
   const refreshStatus = async (): Promise<void> => {
     const folder = resolveWorkspaceFolder(rememberedFolder);
+    const configuredApiKey = deps.settingsManager.getSettings(folder?.uri).apiKey;
     const [hasApiKey, hasUncommittedChanges] = await Promise.all([
-      context.secrets.get(GROQ_API_KEY_SECRET).then((v) => !!v),
+      context.secrets.get(GROQ_API_KEY_SECRET).then((v) => !!configuredApiKey || !!v || !!DEFAULT_GROQ_API_KEY),
       folder ? deps.gitService.hasUncommittedChanges(folder.uri.fsPath) : Promise.resolve(false)
     ]);
     const status: PanelStatus = {
@@ -301,7 +303,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           `Git Standup: you've used all ${deps.aiUsageTracker.dailyLimit} AI summaries for today. Generating without AI instead. The limit resets at midnight.`
         );
       } else {
-        let key = await context.secrets.get(GROQ_API_KEY_SECRET);
+        let key: string | undefined = deps.settingsManager.getSettings().apiKey || undefined;
+        if (!key) {
+          key = await context.secrets.get(GROQ_API_KEY_SECRET);
+        }
+        if (!key && DEFAULT_GROQ_API_KEY) {
+          key = DEFAULT_GROQ_API_KEY;
+        }
         if (!key) {
           key = await promptAndStoreApiKey();
           if (key) {
@@ -501,7 +509,14 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       return;
     }
 
-    let apiKey = await context.secrets.get(GROQ_API_KEY_SECRET);
+    const settings = deps.settingsManager.getSettings(folder.uri);
+    let apiKey: string | undefined = settings.apiKey || undefined;
+    if (!apiKey) {
+      apiKey = await context.secrets.get(GROQ_API_KEY_SECRET);
+    }
+    if (!apiKey && DEFAULT_GROQ_API_KEY) {
+      apiKey = DEFAULT_GROQ_API_KEY;
+    }
     if (!apiKey) {
       apiKey = await promptAndStoreApiKey();
       if (!apiKey) {
@@ -539,7 +554,6 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         extraContext = extraContext ? `${extraContext}\n${note}` : note;
       }
 
-      const settings = deps.settingsManager.getSettings(folder.uri);
       const result = await deps.groqService.generateCommitMessage(apiKey, settings.aiModel, diff, extraContext);
       if (!result.message) {
         vscode.window.showErrorMessage(

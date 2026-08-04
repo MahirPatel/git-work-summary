@@ -28,7 +28,8 @@ export class SettingsManager implements vscode.Disposable {
       ignoredFolders: config.get<string[]>('ignoredFolders', []),
       ignoredExtensions: normalizeExtensions(config.get<string[]>('ignoredExtensions', [])),
       defaultExportFolder: config.get<string>('defaultExportFolder', ''),
-      aiModel: config.get<string>('aiModel', 'qwen/qwen3-32b').trim() || 'qwen/qwen3-32b',
+      aiModel: config.get<string>('aiModel', 'qwen/qwen3.6-27b').trim() || 'qwen/qwen3.6-27b',
+      apiKey: config.get<string>('apiKey', '').trim(),
       aiMaxCommits: clamp(Math.trunc(config.get<number>('aiMaxCommits', 15)), 1, 50)
     };
   }

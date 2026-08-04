@@ -5,6 +5,17 @@ All notable changes to the "Git Standup – AI Work Summary" extension are docum
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-04
+
+### Added
+
+- AI features now work out of the box: **Generate with AI** and **Generate Commit Message** fall back to a built-in default Groq key when no personal key is configured. Running `Set Groq API Key` still stores your own key in encrypted Secret Storage; `Clear Groq API Key` reverts to the default instead of forcing a re-prompt.
+- New `gitWorkSummary.apiKey` setting — paste your own Groq API key directly in Settings instead of using the `Set Groq API Key` command. Machine-scoped (never included in Settings Sync). Takes priority over both the `Set Groq API Key` command and the built-in default.
+
+### Changed
+
+- Default `gitWorkSummary.aiModel` updated to `qwen/qwen3.6-27b`; the previous model has been deprecated by Groq, so existing installs are force-migrated to the new default one time on update, regardless of what was previously configured. If no API key was configured anywhere, the built-in default key is also backfilled into `gitWorkSummary.apiKey` at the same time; an existing personal key (in either the new setting or Secret Storage) is left untouched.
+
 ## [0.2.0] - 2026-07-08
 
 ### Added

@@ -12,6 +12,7 @@ import { AiUsageTracker, DEFAULT_DAILY_AI_LIMIT } from './services/AiUsageTracke
 import { SummaryWebviewProvider } from './views/SummaryWebviewProvider';
 import { DetectedChangesTreeProvider } from './views/DetectedChangesTreeProvider';
 import { registerCommands } from './commands';
+import { runStartupMigration } from './services/startupMigration';
 
 /**
  * Extension entry point. Composes services and views and registers
@@ -23,6 +24,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const logger = new Logger();
   context.subscriptions.push(logger);
   logger.info('Extension activated.');
+
+  void runStartupMigration(context).catch((err) => logger.error('Startup migration failed', err));
 
   const gitService = new GitService(logger);
   const scanner = new WorkspaceScanner(logger);

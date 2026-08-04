@@ -132,6 +132,7 @@ export interface SummarySettings {
   ignoredExtensions: string[];
   defaultExportFolder: string;
   aiModel: string;
+  apiKey: string;
   aiMaxCommits: number;
 }
 

@@ -14,6 +14,8 @@ vsc-extension-quickstart.md
 .github/**
 .claude/**
 resources/icon-source.svg
+.env
+.env.example
 
 # Only README.md and CHANGELOG.md are meant to ship - guards against any
 # other stray markdown file in the project root being packaged by accident.

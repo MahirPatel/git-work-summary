@@ -4,7 +4,7 @@ Turn your day's Git activity into ready-to-paste summary bullets — for standup
 
 ## What it does
 
-Git Standup reads your commits, staged/unstaged changes, and recently edited files, then turns them into a clean, categorized bullet list in seconds — so you're not stuck remembering (or writing up) what you did. Tick the optional **Generate with AI** checkbox for richer, per-commit descriptions and AI-drafted commit messages, powered by [Groq](https://groq.com) — bring your own free API key.
+Git Standup reads your commits, staged/unstaged changes, and recently edited files, then turns them into a clean, categorized bullet list in seconds — so you're not stuck remembering (or writing up) what you did. Tick the optional **Generate with AI** checkbox for richer, per-commit descriptions and AI-drafted commit messages, powered by [Groq](https://groq.com) — works out of the box, or swap in your own free API key anytime.
 
 ![Git Standup demo — generating a summary, an AI-enhanced result, and a generated commit message](images/demo.gif)
 
@@ -28,8 +28,8 @@ That's it — no accounts and no configuration needed. Everything works locally 
 
 **Optional: turn on AI-enhanced summaries**
 
-1. Tick the **Generate with AI** checkbox in the panel.
-2. Paste a free [Groq API key](https://console.groq.com/keys) when prompted — it's stored securely in VS Code's encrypted Secret Storage, never in settings or source code.
+1. Tick the **Generate with AI** checkbox in the panel — that's it, AI-enhanced summaries and commit messages work immediately with a built-in default key.
+2. Prefer to use your own [Groq API key](https://console.groq.com/keys)? Either paste it into the `gitWorkSummary.apiKey` setting, or run **Set Groq API Key** from the Command Palette to store it in VS Code's encrypted Secret Storage instead. `gitWorkSummary.apiKey` takes priority if set, then a key from **Set Groq API Key**, then the built-in default. **Clear Groq API Key** / clearing `gitWorkSummary.apiKey` falls back to the next one in that order.
 3. AI-enhanced summaries are limited to 10 per day (resets at midnight); untick the checkbox anytime to go back to fully local, unlimited generation.
 
 ## How to use
@@ -38,7 +38,7 @@ That's it — no accounts and no configuration needed. Everything works locally 
 2. Click **Generate Today's Summary**, **Generate Yesterday's Summary**, **Generate Weekly Summary**, or **Generate Monthly Summary** — or click **Custom Range…** to reveal a start/end date picker and **Generate Custom Summary**.
 3. Click **Copy** to copy the summary as plain text, or **Export as Markdown** to save it as a file.
 4. Click **Clear** to reset the panel before generating again.
-5. If you have uncommitted changes and an AI key is set up, a **Generate Commit Message** button appears — click it to draft a commit message from your actual diff. It's inserted directly into Source Control, and also shown in the panel with its own **Copy** button so you can grab it anytime.
+5. If you have uncommitted changes, a **Generate Commit Message** button appears — click it to draft a commit message from your actual diff. It's inserted directly into Source Control, and also shown in the panel with its own **Copy** button so you can grab it anytime.
 6. Open the **Detected Changes** view below the summary to see exactly which commits and files were found, grouped by category.
 7. Click **Share** in the panel header anytime to copy a link to the extension or open its Marketplace page.
 

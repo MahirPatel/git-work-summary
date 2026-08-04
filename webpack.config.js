@@ -3,7 +3,22 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
+const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+/** Reads a single `KEY=value` line from a gitignored `.env` at the repo root; returns '' if the file or key is absent. */
+function readEnvValue(key) {
+  const envPath = path.resolve(__dirname, '.env');
+  if (!fs.existsSync(envPath)) {
+    return '';
+  }
+  const line = fs
+    .readFileSync(envPath, 'utf8')
+    .split('\n')
+    .find((l) => l.startsWith(`${key}=`));
+  return line ? line.slice(key.length + 1).trim() : '';
+}
 
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
@@ -38,6 +53,9 @@ const extensionConfig = {
     ]
   },
   plugins: [
+    new webpack.DefinePlugin({
+      'process.env.DEFAULT_GROQ_API_KEY': JSON.stringify(readEnvValue('DEFAULT_GROQ_API_KEY'))
+    }),
     new CopyWebpackPlugin({
       patterns: [
         {
